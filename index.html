@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kalorien">
+<title>Kalorien &middot; Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-0: #07090f;
+    --bg-1: #0c101a;
+    --bg-2: #111726;
+    --glass: rgba(255, 255, 255, 0.045);
+    --glass-strong: rgba(255, 255, 255, 0.07);
+    --border: rgba(255, 255, 255, 0.09);
+    --border-soft: rgba(255, 255, 255, 0.06);
+    --text: #eef1f7;
+    --text-dim: #8b93a7;
+    --text-faint: #5b6275;
+    --rose: #e6b7a0;
+    --rose-strong: #d99c78;
+    --rose-glow: rgba(230, 183, 160, 0.28);
+    --emerald: #45d6a4;
+    --emerald-glow: rgba(69, 214, 164, 0.22);
+    --danger: #e77c7c;
+    --radius: 22px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+    background: var(--bg-0);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Inter, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1000px 600px at 85% -10%, rgba(230, 183, 160, 0.09), transparent 60%),
+      radial-gradient(900px 700px at -15% 25%, rgba(45, 90, 140, 0.16), transparent 60%),
+      radial-gradient(700px 500px at 50% 110%, rgba(69, 214, 164, 0.07), transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-0) 55%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 22px 18px calc(104px + var(--safe-b));
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 6px 4px 20px;
+  }
+  header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(100deg, var(--text) 30%, var(--rose) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header .date {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  /* ---------- Cards / Glass ---------- */
+  .card {
+    background: linear-gradient(165deg, var(--glass-strong), var(--glass) 60%);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  /* ---------- Hero (Tagesbilanz) ---------- */
+  .hero { text-align: center; padding: 34px 20px 24px; position: relative; }
+
+  .streak-pill {
+    position: absolute;
+    top: 13px; right: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 650;
+    color: #ffb35c;
+    background: rgba(255, 150, 60, 0.08);
+    border: 1px solid rgba(255, 160, 70, 0.28);
+    border-radius: 99px;
+    padding: 6px 11px;
+    text-shadow: 0 0 14px rgba(255, 150, 60, 0.55);
+    animation: streakGlow 2.8s ease-in-out infinite;
+    transition: opacity 0.4s, filter 0.4s;
+  }
+  @keyframes streakGlow {
+    50% { box-shadow: 0 0 16px rgba(255, 140, 50, 0.28); border-color: rgba(255, 170, 80, 0.45); }
+  }
+  .streak-pill .flame { font-size: 13px; filter: drop-shadow(0 0 6px rgba(255, 140, 50, 0.7)); }
+  .streak-pill.zero {
+    opacity: 0.3;
+    filter: grayscale(1);
+    animation: none;
+    text-shadow: none;
+  }
+  .hero .kcal-now {
+    font-size: 58px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(120deg, #f6e7dc, var(--rose) 70%, var(--rose-strong));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 4px 24px var(--rose-glow));
+  }
+  .hero .kcal-goal {
+    margin-top: 8px;
+    font-size: 15px;
+    color: var(--text-dim);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .hero .kcal-goal .edit-hint { font-size: 11px; opacity: 0.65; margin-left: 4px; }
+  .hero .remaining {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+  .hero .remaining b { color: var(--emerald); font-weight: 600; }
+  .hero .remaining b.over { color: var(--danger); }
+
+  .progress-track {
+    margin-top: 22px;
+    height: 12px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--emerald), var(--rose) 85%);
+    box-shadow: 0 0 18px var(--emerald-glow), 0 0 10px var(--rose-glow);
+    transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill.over { background: linear-gradient(90deg, var(--rose-strong), var(--danger)); }
+  .progress-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: shimmer 3.2s ease-in-out infinite;
+  }
+  @keyframes shimmer { 60%, 100% { transform: translateX(100%); } }
+
+  /* ---------- Inputs & Buttons ---------- */
+  .field-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+    padding: 13px 14px;
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  input::placeholder { color: var(--text-faint); }
+  input:focus {
+    border-color: var(--rose);
+    box-shadow: 0 0 0 3px var(--rose-glow);
+  }
+  input[type="number"] { max-width: 116px; }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .btn {
+    display: block;
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 650;
+    font-family: inherit;
+    color: #1c110a;
+    background: linear-gradient(120deg, #f0cfb8, var(--rose) 55%, var(--rose-strong));
+    box-shadow: 0 6px 20px var(--rose-glow), inset 0 1px 0 rgba(255,255,255,0.4);
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.2s;
+  }
+  .btn:active { transform: scale(0.96); filter: brightness(1.08); }
+
+  .icon-btn {
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    cursor: pointer;
+    transition: transform 0.12s ease, color 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .icon-btn:active { transform: scale(0.9); }
+  .icon-btn.danger:active { color: var(--danger); border-color: var(--danger); }
+  .icon-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+  /* ---------- Favoriten ---------- */
+  .fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fav {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 13px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: transform 0.12s ease, border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .fav:active { transform: scale(0.96); border-color: var(--rose); background: rgba(230,183,160,0.08); }
+  .fav .f-name { font-size: 13.5px; font-weight: 600; display: block; margin-bottom: 4px; line-height: 1.25; }
+  .fav .f-kcal { font-size: 12px; color: var(--rose); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .fav .f-name { padding-right: 22px; }
+  .f-del {
+    position: absolute; top: 4px; right: 4px;
+    width: 28px; height: 28px;
+    border: none; background: transparent;
+    color: var(--text-faint); font-size: 12px;
+    border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.12s ease, color 0.2s, background 0.2s;
+  }
+  .f-del:active { transform: scale(0.85); color: var(--danger); background: rgba(231, 124, 124, 0.12); }
+
+  .add-row { display: flex; gap: 10px; }
+  .add-row .btn { flex: 1; }
+  .icon-btn.star {
+    width: 49px; height: 49px;
+    border-radius: 14px;
+    font-size: 21px;
+    color: var(--rose);
+  }
+  .icon-btn.star:active { border-color: var(--rose); background: rgba(230, 183, 160, 0.1); }
+
+  /* ---------- Mahlzeiten-Liste ---------- */
+  .meal-list { list-style: none; }
+  .cat-block {
+    list-style: none;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 4px 12px 6px;
+    margin-bottom: 10px;
+  }
+  .cat-block:last-of-type { margin-bottom: 0; }
+  .cat-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 2px 4px;
+    font-size: 10.5px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+  }
+  .cat-head .cat-sum {
+    letter-spacing: 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .m-qty { color: var(--rose); font-size: 12.5px; font-weight: 650; }
+  .meal {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--border-soft);
+    animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .meal:last-child { border-bottom: none; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .meal .m-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: linear-gradient(120deg, var(--emerald), var(--rose));
+    box-shadow: 0 0 8px var(--emerald-glow);
+    flex-shrink: 0;
+  }
+  .meal .m-info { flex: 1; min-width: 0; }
+  .meal .m-name { font-size: 14.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meal .m-time { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+  .meal .m-kcal { font-size: 14px; font-weight: 650; color: var(--rose); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty {
+    text-align: center; color: var(--text-faint);
+    font-size: 13.5px; padding: 22px 0 14px;
+  }
+
+  .day-total {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 14px; font-weight: 600;
+  }
+  .day-total .sum { color: var(--rose); font-size: 17px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Historie ---------- */
+  .date-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 16px;
+  }
+  .date-nav .current {
+    flex: 1; text-align: center;
+  }
+  .date-nav .current .weekday { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .date-nav .current .datestr { font-size: 17px; font-weight: 700; margin-top: 2px; }
+  .date-picker-row { display: flex; justify-content: center; margin-bottom: 4px; }
+  input[type="date"] {
+    max-width: 210px; text-align: center;
+    color-scheme: dark;
+    font-size: 14px; padding: 10px 12px;
+  }
+
+  /* ---------- Statistik ---------- */
+  .segmented {
+    display: flex;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+  .segmented button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.25s, color 0.25s;
+  }
+  .segmented button:active { transform: scale(0.95); }
+  .segmented button.active {
+    background: linear-gradient(120deg, rgba(230,183,160,0.22), rgba(230,183,160,0.12));
+    color: var(--rose);
+    box-shadow: inset 0 0 0 1px rgba(230,183,160,0.35);
+  }
+  .chart-wrap { position: relative; height: 240px; }
+  .chart-caption { text-align: center; font-size: 12px; color: var(--text-faint); margin-top: 12px; }
+
+  /* ---------- Bottom Navigation ---------- */
+  nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    padding: 10px 18px calc(12px + var(--safe-b));
+    background: linear-gradient(180deg, transparent, rgba(7, 9, 15, 0.85) 40%);
+    pointer-events: none;
+    z-index: 50;
+  }
+  .nav-inner {
+    pointer-events: auto;
+    display: flex;
+    gap: 6px;
+    background: rgba(18, 23, 36, 0.72);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  }
+  .nav-inner button {
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    transition: transform 0.12s ease, background 0.25s, color 0.25s;
+  }
+  .nav-inner button:active { transform: scale(0.94); }
+  .nav-inner button .ico { font-size: 17px; line-height: 1; }
+  .nav-inner button.active {
+    color: var(--rose);
+    background: rgba(230, 183, 160, 0.1);
+  }
+
+  /* ---------- Views ---------- */
+  .view { display: none; animation: fade 0.3s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(96px + var(--safe-b));
+    transform: translateX(-50%) translateY(16px);
+    background: rgba(20, 26, 40, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 11px 20px;
+    font-size: 13.5px;
+    font-weight: 550;
+    color: var(--text);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast .t-accent { color: var(--emerald); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>Kalorien</h1>
+    <span class="date" id="header-date"></span>
+  </header>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view active" id="view-dashboard">
+
+    <div class="card hero">
+      <div class="streak-pill zero" id="streak-pill" title="Tage in Folge im Kalorienziel">
+        <span class="flame">&#128293;</span><span id="streak-text">0 Tage</span>
+      </div>
+      <div class="kcal-now" id="kcal-now">0</div>
+      <div class="kcal-goal" id="goal-label" title="Tagesziel ändern">
+        / 2.500 kcal <span class="edit-hint">&#9998;</span>
+      </div>
+      <div class="remaining" id="remaining"></div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Mahlzeit hinzufügen</h2>
+      <div class="field-row">
+        <input type="text" id="inp-name" placeholder="Lebensmittel" autocomplete="off" enterkeyhint="next">
+        <input type="number" id="inp-kcal" placeholder="kcal" min="1" inputmode="numeric" enterkeyhint="done">
+      </div>
+      <div class="add-row">
+        <button class="btn" id="btn-add">Hinzufügen</button>
+        <button class="icon-btn star" id="btn-fav-save" aria-label="Als Favorit speichern" title="Als Favorit speichern">&#9734;</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Favoriten</h2>
+      <div class="fav-grid" id="fav-grid"></div>
+    </div>
+
+    <div class="card">
+      <h2>Heute gegessen</h2>
+      <ul class="meal-list" id="today-list"></ul>
+      <div class="day-total">
+        <span>Gesamt</span>
+        <span class="sum" id="today-sum">0 kcal</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ================= HISTORIE ================= -->
+  <section class="view" id="view-history">
+
+    <div class="card">
+      <h2>Tag auswählen</h2>
+      <div class="date-nav">
+        <button class="icon-btn" id="hist-prev" aria-label="Vorheriger Tag">&#10094;</button>
+        <div class="current">
+          <div class="weekday" id="hist-weekday"></div>
+          <div class="datestr" id="hist-datestr"></div>
+        </div>
+        <button class="icon-btn" id="hist-next" aria-label="Nächster Tag">&#10095;</button>
+      </div>
+      <div class="date-picker-row">
+        <input type="date" id="hist-picker">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="hist-list-title">Mahlzeiten</h2>
+      <ul class="meal-list" id="hist-list"></ul>
+      <div class="day-total">
+        <span>Endsumme</span>
+        <span class="sum" id="hist-sum">0 kcal</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ================= STATISTIK ================= -->
+  <section class="view" id="view-stats">
+
+    <div class="card">
+      <h2>Verlauf</h2>
+      <div class="segmented" id="chart-seg">
+        <button data-range="week" class="active">Woche</button>
+        <button data-range="month">Monat</button>
+        <button data-range="year">Jahr</button>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="chart-caption" id="chart-caption"></div>
+    </div>
+
+  </section>
+
+</div>
+
+<nav>
+  <div class="nav-inner">
+    <button data-view="dashboard" class="active"><span class="ico">&#9679;</span>Heute</button>
+    <button data-view="history"><span class="ico">&#9776;</span>Historie</button>
+    <button data-view="stats"><span class="ico">&#10148;</span>Statistik</button>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================= Konstanten & Helfer ================= */
+
+  const STORAGE_KEY = 'kalorien-tracker-v1';
+  const fmt = new Intl.NumberFormat('de-DE');
+  const WEEKDAYS = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  const WEEKDAYS_SHORT = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const MONTHS_SHORT = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+  const $ = (sel) => document.querySelector(sel);
+  const pad = (n) => String(n).padStart(2, '0');
+  const dateKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  // Uhrzeit immer explizit auf 12:00 Uhr setzen, um Zeitzonen-/DST-Sprünge abzufangen
+  const keyToDate = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d, 12, 0, 0); };
+  const noonDate = (y, m, d) => new Date(y, m, d, 12, 0, 0);
+  const todayKey = () => dateKey(new Date());
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  const haptic = (ms = 12) => { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } };
+
+  /* ---------- Mahlzeiten-Kategorien ---------- */
+  const CATS = [
+    { id: 'breakfast', label: 'Frühstück' },
+    { id: 'lunch',     label: 'Mittagessen' },
+    { id: 'dinner',    label: 'Abendessen' },
+    { id: 'snack',     label: 'Snacks' }
+  ];
+  // 5–11 Uhr = Frühstück, 11–15 = Mittagessen, 17–22 = Abendessen, sonst Snacks
+  const catForHour = (h) => (h >= 5 && h < 11) ? 'breakfast' : (h >= 11 && h < 15) ? 'lunch' : (h >= 17 && h < 22) ? 'dinner' : 'snack';
+  // Kategorie eines Eintrags – mit Fallback für Alt-Daten ohne cat-Feld
+  const catOf = (e) => e.cat || (e.time ? catForHour(Number(e.time.split(':')[0])) : 'snack');
+  const entryKcal = (e) => e.kcal * (e.qty || 1);
+
+  /* ================= State & Persistenz ================= */
+
+  let state = null;
+  let chart = null;
+  let chartRange = 'week';
+  let histDate = new Date();
+  histDate.setHours(12, 0, 0, 0);
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { state = JSON.parse(raw); migrate(); return; }
+    } catch (e) {}
+    state = seed();
+    save();
+  }
+
+  // Alt-Daten sanft nachrüsten: qty- und cat-Felder ergänzen
+  function migrate() {
+    let dirty = false;
+    Object.values(state.days).forEach((entries) => {
+      entries.forEach((e) => {
+        if (!e.qty) { e.qty = 1; dirty = true; }
+        if (!e.cat) { e.cat = catOf(e); dirty = true; }
+      });
+    });
+    if (dirty) save();
+  }
+
+  // Streak: Tage in Folge, an denen getrackt wurde und das Ziel um max. 15 % überschritten ist.
+  // Heute zählt mit, sobald es die Regel erfüllt – bricht den Streak aber nur, wenn bereits überzogen.
+  function calcStreak() {
+    const limit = state.goal * 1.15;
+    const qualifies = (key) => { const t = totalFor(key); return t > 0 && t <= limit; };
+    let streak = 0;
+    if (totalFor(todayKey()) > limit) return 0;
+    if (qualifies(todayKey())) streak++;
+    const now = new Date();
+    const d = noonDate(now.getFullYear(), now.getMonth(), now.getDate());
+    for (;;) {
+      d.setDate(d.getDate() - 1);
+      if (!qualifies(dateKey(d))) break;
+      streak++;
+    }
+    return streak;
+  }
+
+  /* ================= Beispieldaten (erster Start) ================= */
+
+  function seed() {
+    const favorites = [
+      { id: uid(), name: 'Haferflocken Frühstück', kcal: 450 },
+      { id: uid(), name: 'Protein Shake', kcal: 250 },
+      { id: uid(), name: 'Hähnchen mit Reis', kcal: 650 },
+      { id: uid(), name: 'Magerquark mit Beeren', kcal: 220 },
+      { id: uid(), name: 'Vollkornbrot mit Ei', kcal: 380 },
+      { id: uid(), name: 'Apfel', kcal: 90 }
+    ];
+
+    const pool = {
+      breakfast: [
+        ['Haferflocken mit Banane', 430], ['Rührei mit Toast', 390],
+        ['Joghurt mit Müsli', 340], ['Käsebrötchen', 310], ['Porridge mit Beeren', 380]
+      ],
+      lunch: [
+        ['Hähnchen mit Reis', 650], ['Pasta Bolognese', 720], ['Linsensuppe mit Brot', 480],
+        ['Wrap mit Pute', 540], ['Gemüsepfanne mit Tofu', 460], ['Lachs mit Kartoffeln', 610]
+      ],
+      dinner: [
+        ['Brotzeit mit Käse', 520], ['Ofengemüse mit Feta', 450], ['Chili con Carne', 640],
+        ['Omelett mit Gemüse', 380], ['Pizza Margherita (halb)', 560], ['Salat mit Hähnchen', 420]
+      ],
+      snack: [
+        ['Protein Shake', 250], ['Apfel', 90], ['Handvoll Nüsse', 180],
+        ['Banane', 105], ['Proteinriegel', 210], ['Dunkle Schokolade (2 Stück)', 110]
+      ]
+    };
+
+    // Deterministischer Pseudozufall, damit die Beispieldaten ruhig wirken
+    let s = 42;
+    const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+
+    const days = {};
+    const now = new Date();
+    const start = noonDate(now.getFullYear(), 0, 1); // 1. Januar, 12:00 Uhr (DST-sicher)
+
+    for (let d = new Date(start); d < now; d.setDate(d.getDate() + 1)) {
+      if (dateKey(d) === todayKey()) break;
+      const entries = [];
+      const b = pick(pool.breakfast);
+      entries.push({ id: uid(), name: b[0], kcal: b[1], qty: 1, cat: 'breakfast', time: `0${7 + Math.floor(rnd() * 3)}:${pad(Math.floor(rnd() * 60))}`.slice(-5) });
+      const l = pick(pool.lunch);
+      entries.push({ id: uid(), name: l[0], kcal: l[1], qty: 1, cat: 'lunch', time: `${12 + Math.floor(rnd() * 2)}:${pad(Math.floor(rnd() * 60))}` });
+      const di = pick(pool.dinner);
+      entries.push({ id: uid(), name: di[0], kcal: di[1], qty: 1, cat: 'dinner', time: `${18 + Math.floor(rnd() * 3)}:${pad(Math.floor(rnd() * 60))}` });
+      if (rnd() > 0.35) {
+        const sn = pick(pool.snack);
+        entries.push({ id: uid(), name: sn[0], kcal: sn[1], qty: 1, cat: 'snack', time: `${15 + Math.floor(rnd() * 2)}:${pad(Math.floor(rnd() * 60))}` });
+      }
+      days[dateKey(d)] = entries;
+    }
+
+    // „Cheat Day" vor 3 Tagen (> Ziel + 15 %) → bricht den Streak dort und
+    // erzeugt einen sichtbaren Beispiel-Streak der letzten Tage
+    const cheat = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - 3);
+    days[dateKey(cheat)] = [
+      { id: uid(), name: 'Pancakes mit Sirup', kcal: 680, qty: 1, cat: 'breakfast', time: '09:40' },
+      { id: uid(), name: 'Burger mit Pommes', kcal: 1150, qty: 1, cat: 'lunch', time: '13:20' },
+      { id: uid(), name: 'Pizza Salami', kcal: 890, qty: 1, cat: 'dinner', time: '19:45' },
+      { id: uid(), name: 'Eis', kcal: 320, qty: 2, cat: 'snack', time: '21:10' }
+    ];
+
+    // Heute: schon etwas eingetragen, damit Dashboard, Kategorien und Streak sofort leben
+    days[todayKey()] = [
+      { id: uid(), name: 'Haferflocken Frühstück', kcal: 450, qty: 1, cat: 'breakfast', time: '08:10' },
+      { id: uid(), name: 'Protein Shake', kcal: 250, qty: 1, cat: 'snack', time: '11:30' }
+    ];
+
+    return { goal: 2500, favorites, days };
+  }
+
+  /* ================= Daten-Zugriff ================= */
+
+  const entriesFor = (key) => state.days[key] || [];
+  const totalFor = (key) => entriesFor(key).reduce((sum, e) => sum + entryKcal(e), 0);
+
+  // merge: true → gleicher Name + gleiche Kategorie am selben Tag zählt die Menge hoch
+  function addEntry(name, kcal, opts = {}) {
+    const key = opts.key || todayKey();
+    const now = new Date();
+    const cat = catForHour(now.getHours());
+    if (opts.merge) {
+      const existing = entriesFor(key).find((e) => e.name.toLowerCase() === name.toLowerCase() && catOf(e) === cat);
+      if (existing) {
+        existing.qty = (existing.qty || 1) + 1;
+        save();
+        return existing;
+      }
+    }
+    if (!state.days[key]) state.days[key] = [];
+    const entry = { id: uid(), name, kcal, qty: 1, cat, time: `${pad(now.getHours())}:${pad(now.getMinutes())}` };
+    state.days[key].push(entry);
+    save();
+    return entry;
+  }
+
+  function removeEntry(id, key = todayKey()) {
+    if (!state.days[key]) return;
+    state.days[key] = state.days[key].filter((e) => e.id !== id);
+    if (state.days[key].length === 0) delete state.days[key];
+    save();
+  }
+
+  /* ================= Rendering: gruppierte Mahlzeiten-Liste ================= */
+
+  function mealHTML(e) {
+    const qty = e.qty || 1;
+    return `
+      <div class="meal">
+        <span class="m-dot"></span>
+        <span class="m-info">
+          <span class="m-name">${esc(e.name)}${qty > 1 ? ` <span class="m-qty">(${qty}&times;)</span>` : ''}</span>
+          <div class="m-time">${e.time || ''}</div>
+        </span>
+        <span class="m-kcal">${fmt.format(entryKcal(e))} kcal</span>
+        <button class="icon-btn danger" data-del="${e.id}" aria-label="Eintrag löschen">&#10005;</button>
+      </div>`;
+  }
+
+  function groupedListHTML(entries, emptyText) {
+    if (entries.length === 0) return `<li class="empty">${emptyText}</li>`;
+    return CATS.map((c) => {
+      const items = entries.filter((e) => catOf(e) === c.id);
+      if (items.length === 0) return '';
+      const sub = items.reduce((s, e) => s + entryKcal(e), 0);
+      return `
+        <li class="cat-block">
+          <div class="cat-head"><span>${c.label}</span><span class="cat-sum">${fmt.format(sub)} kcal</span></div>
+          ${items.map(mealHTML).join('')}
+        </li>`;
+    }).join('');
+  }
+
+  /* ================= Rendering: Dashboard ================= */
+
+  function renderStreak() {
+    const s = calcStreak();
+    const pill = $('#streak-pill');
+    $('#streak-text').textContent = s === 1 ? '1 Tag Streak' : `${s} Tage Streak`;
+    pill.classList.toggle('zero', s === 0);
+  }
+
+  function renderDashboard() {
+    renderStreak();
+    const total = totalFor(todayKey());
+    const goal = state.goal;
+    const pct = Math.min(100, (total / goal) * 100);
+    const over = total > goal;
+
+    $('#kcal-now').textContent = fmt.format(total);
+    $('#goal-label').innerHTML = `/ ${fmt.format(goal)} kcal <span class="edit-hint">&#9998;</span>`;
+
+    const rem = goal - total;
+    $('#remaining').innerHTML = over
+      ? `<b class="over">${fmt.format(-rem)} kcal über dem Ziel</b>`
+      : `Noch <b>${fmt.format(rem)} kcal</b> übrig`;
+
+    const fill = $('#progress-fill');
+    fill.style.width = pct + '%';
+    fill.classList.toggle('over', over);
+
+    // Heutige Liste – nach Tageszeit gruppiert
+    $('#today-list').innerHTML = groupedListHTML(entriesFor(todayKey()), 'Noch nichts eingetragen – guten Appetit!');
+    $('#today-sum').textContent = `${fmt.format(total)} kcal`;
+  }
+
+  function renderFavorites() {
+    // Kein <button> im <button>: Karte ist ein div, Löschen-X ist der einzige echte Button
+    $('#fav-grid').innerHTML = state.favorites.length === 0
+      ? '<div class="empty" style="grid-column: 1 / -1;">Keine Favoriten – speichere eine Mahlzeit mit dem &#9734;-Button.</div>'
+      : state.favorites.map((f) => `
+      <div class="fav" data-fav="${f.id}" role="button" tabindex="0">
+        <button class="f-del" data-favdel="${f.id}" aria-label="Favorit entfernen">&#10005;</button>
+        <span class="f-name">${esc(f.name)}</span>
+        <span class="f-kcal">${fmt.format(f.kcal)} kcal</span>
+      </div>`).join('');
+  }
+
+  /* ================= Rendering: Historie ================= */
+
+  function renderHistory() {
+    const key = dateKey(histDate);
+    const isToday = key === todayKey();
+
+    $('#hist-weekday').textContent = isToday ? 'Heute' : WEEKDAYS[histDate.getDay()];
+    $('#hist-datestr').textContent = `${histDate.getDate()}. ${MONTHS[histDate.getMonth()]} ${histDate.getFullYear()}`;
+    $('#hist-picker').value = key;
+    $('#hist-picker').max = todayKey();
+    $('#hist-next').disabled = isToday;
+
+    $('#hist-list').innerHTML = groupedListHTML(entriesFor(key), 'Für diesen Tag gibt es keine Einträge.');
+    $('#hist-sum').textContent = `${fmt.format(totalFor(key))} kcal`;
+  }
+
+  /* ================= Rendering: Charts ================= */
+
+  function weekData() {
+    const labels = [], values = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      labels.push(`${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}.`);
+      values.push(totalFor(dateKey(d)));
+    }
+    return { labels, values, caption: 'Exakte Kalorien der letzten 7 Tage' };
+  }
+
+  function monthData() {
+    // Letzte 30 Tage als feine Einzel-Balken – zeigt den echten Kalorien-Rhythmus
+    const labels = [], values = [];
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      labels.push(`${d.getDate()}.${d.getMonth() + 1}.`);
+      values.push(totalFor(dateKey(d)));
+    }
+    return { labels, values, caption: 'Tageskalorien der letzten 30 Tage' };
+  }
+
+  function yearData() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const labels = [], values = [];
+    for (let m = 0; m < 12; m++) {
+      labels.push(MONTHS_SHORT[m]);
+      if (m > now.getMonth()) { values.push(null); continue; }
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      let sum = 0, cnt = 0;
+      for (let day = 1; day <= daysInMonth; day++) {
+        const t = totalFor(dateKey(noonDate(y, m, day)));
+        if (t > 0) { sum += t; cnt++; }
+      }
+      values.push(cnt ? Math.round(sum / cnt) : 0);
+    }
+    return { labels, values, caption: `Monatsdurchschnitt – ${y}` };
+  }
+
+  const goalLinePlugin = {
+    id: 'goalLine',
+    afterDatasetsDraw(c) {
+      const { ctx, chartArea, scales } = c;
+      if (!scales.y || !chartArea) return;
+      const yPos = scales.y.getPixelForValue(state.goal);
+      if (yPos < chartArea.top || yPos > chartArea.bottom) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(69, 214, 164, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(chartArea.left, yPos);
+      ctx.lineTo(chartArea.right, yPos);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(69, 214, 164, 0.8)';
+      ctx.font = '600 10px -apple-system, sans-serif';
+      ctx.fillText('Ziel', chartArea.right - 22, yPos - 5);
+      ctx.restore();
+    }
+  };
+
+  function barGradient(context) {
+    const { ctx, chartArea } = context.chart;
+    if (!chartArea) return 'rgba(230, 183, 160, 0.8)';
+    const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    g.addColorStop(0, 'rgba(230, 183, 160, 0.25)');
+    g.addColorStop(1, 'rgba(230, 183, 160, 0.95)');
+    return g;
+  }
+
+  function renderChart() {
+    const data = chartRange === 'week' ? weekData() : chartRange === 'month' ? monthData() : yearData();
+    $('#chart-caption').textContent = data.caption;
+
+    if (!chart) {
+      chart = new Chart($('#chart'), {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            data: data.values,
+            backgroundColor: barGradient,
+            hoverBackgroundColor: 'rgba(240, 207, 184, 1)',
+            borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 42
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 700, easing: 'easeOutQuart' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(17, 23, 38, 0.95)',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1,
+              titleColor: '#eef1f7',
+              bodyColor: '#e6b7a0',
+              padding: 12,
+              cornerRadius: 12,
+              displayColors: false,
+              callbacks: {
+                label: (item) => ` ${fmt.format(item.raw ?? 0)} kcal`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#8b93a7', font: { size: 11 }, autoSkip: true, maxRotation: 0, maxTicksLimit: 12 },
+              border: { color: 'rgba(255,255,255,0.08)' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#5b6275', font: { size: 10 }, maxTicksLimit: 6 },
+              border: { display: false }
+            }
+          }
+        },
+        plugins: [goalLinePlugin]
+      });
+    } else {
+      chart.data.labels = data.labels;
+      chart.data.datasets[0].data = data.values;
+    }
+    // Feinjustierung je nach Datendichte (30 schlanke Balken vs. 7/12 breite)
+    const dense = data.labels.length > 12;
+    chart.data.datasets[0].borderRadius = dense ? 4 : 8;
+    chart.options.scales.x.ticks.maxTicksLimit = dense ? 8 : 12;
+    chart.options.scales.x.ticks.font.size = dense ? 10 : 11;
+    chart.update();
+  }
+
+  /* ================= UI-Helfer ================= */
+
+  function esc(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  let toastTimer = null;
+  function toast(html) {
+    const el = $('#toast');
+    el.innerHTML = html;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  function refreshAll() {
+    renderDashboard();
+    renderHistory();
+    if ($('#view-stats').classList.contains('active')) renderChart();
+  }
+
+  /* ================= Events ================= */
+
+  function bindEvents() {
+    // Manuelles Hinzufügen
+    const nameInp = $('#inp-name');
+    const kcalInp = $('#inp-kcal');
+
+    const submit = () => {
+      const name = nameInp.value.trim();
+      const kcal = Math.round(Number(kcalInp.value));
+      if (!name) { nameInp.focus(); return; }
+      if (!kcal || kcal <= 0) { kcalInp.focus(); return; }
+      addEntry(name, kcal);
+      nameInp.value = '';
+      kcalInp.value = '';
+      haptic();
+      toast(`<span class="t-accent">+${fmt.format(kcal)} kcal</span>&nbsp; ${esc(name)}`);
+      refreshAll();
+    };
+    $('#btn-add').addEventListener('click', submit);
+    kcalInp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    nameInp.addEventListener('keydown', (e) => { if (e.key === 'Enter') kcalInp.focus(); });
+
+    // Aktuelle Eingabe als Favorit speichern
+    $('#btn-fav-save').addEventListener('click', () => {
+      const name = nameInp.value.trim();
+      const kcal = Math.round(Number(kcalInp.value));
+      if (!name) { nameInp.focus(); return; }
+      if (!kcal || kcal <= 0) { kcalInp.focus(); return; }
+      const exists = state.favorites.some((f) => f.name.toLowerCase() === name.toLowerCase() && f.kcal === kcal);
+      if (exists) { toast('Bereits in den Favoriten'); return; }
+      state.favorites.push({ id: uid(), name, kcal });
+      save();
+      renderFavorites();
+      haptic();
+      toast(`<span class="t-accent">&#9733;</span>&nbsp; ${esc(name)} als Favorit gespeichert`);
+    });
+
+    // Favoriten (Event-Delegation): X löscht, Karte trackt
+    $('#fav-grid').addEventListener('click', (e) => {
+      const del = e.target.closest('[data-favdel]');
+      if (del) {
+        state.favorites = state.favorites.filter((f) => f.id !== del.dataset.favdel);
+        save();
+        renderFavorites();
+        haptic(20);
+        toast('Favorit entfernt');
+        return;
+      }
+      const card = e.target.closest('[data-fav]');
+      if (!card) return;
+      const fav = state.favorites.find((f) => f.id === card.dataset.fav);
+      if (!fav) return;
+      const entry = addEntry(fav.name, fav.kcal, { merge: true });
+      haptic();
+      const qtyInfo = (entry.qty || 1) > 1 ? ` (${entry.qty}&times;)` : '';
+      toast(`<span class="t-accent">+${fmt.format(fav.kcal)} kcal</span>&nbsp; ${esc(fav.name)}${qtyInfo}`);
+      refreshAll();
+    });
+
+    // Löschen von heutigen Einträgen
+    $('#today-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-del]');
+      if (!btn) return;
+      removeEntry(btn.dataset.del);
+      haptic(20);
+      toast('Eintrag gelöscht');
+      refreshAll();
+    });
+
+    // Löschen von Einträgen in der Historie (z. B. Tippfehler von gestern)
+    $('#hist-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-del]');
+      if (!btn) return;
+      removeEntry(btn.dataset.del, dateKey(histDate));
+      haptic(20);
+      toast('Eintrag gelöscht');
+      refreshAll(); // aktualisiert Historie, Dashboard und Graphen
+    });
+
+    // Tagesziel ändern
+    $('#goal-label').addEventListener('click', () => {
+      const val = prompt('Neues Tagesziel (kcal):', state.goal);
+      if (val === null) return;
+      const goal = Math.round(Number(val));
+      if (goal >= 500 && goal <= 10000) {
+        state.goal = goal;
+        save();
+        haptic();
+        refreshAll();
+      }
+    });
+
+    // Historie: Navigation
+    $('#hist-prev').addEventListener('click', () => {
+      histDate.setDate(histDate.getDate() - 1);
+      haptic();
+      renderHistory();
+    });
+    $('#hist-next').addEventListener('click', () => {
+      if (dateKey(histDate) === todayKey()) return;
+      histDate.setDate(histDate.getDate() + 1);
+      haptic();
+      renderHistory();
+    });
+    $('#hist-picker').addEventListener('change', (e) => {
+      if (!e.target.value) return;
+      const d = keyToDate(e.target.value);
+      if (dateKey(d) > todayKey()) return; // String-Vergleich statt Date-Vergleich (zeitzonensicher)
+      histDate = d;
+      renderHistory();
+    });
+
+    // Chart-Umschalter
+    $('#chart-seg').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-range]');
+      if (!btn || btn.classList.contains('active')) return;
+      document.querySelectorAll('#chart-seg button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      chartRange = btn.dataset.range;
+      haptic();
+      renderChart();
+    });
+
+    // Bottom-Navigation – flüssiger Wechsel:
+    // 1) alte Ansicht ausblenden, 2) unsichtbar nach oben scrollen,
+    // 3) im nächsten Frame die neue Ansicht einfaden. So ist der Scroll-Sprung nie sichtbar.
+    document.querySelectorAll('.nav-inner button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('active')) return;
+        document.querySelectorAll('.nav-inner button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        haptic();
+
+        document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+        window.scrollTo(0, 0); // sofortiger Scroll, während keine Ansicht sichtbar ist
+
+        requestAnimationFrame(() => {
+          if (btn.dataset.view === 'history') renderHistory();
+          $('#view-' + btn.dataset.view).classList.add('active');
+          if (btn.dataset.view === 'stats') renderChart();
+        });
+      });
+    });
+  }
+
+  /* ================= Init ================= */
+
+  function init() {
+    load();
+
+    const now = new Date();
+    $('#header-date').textContent = `${WEEKDAYS[now.getDay()]}, ${now.getDate()}. ${MONTHS[now.getMonth()]}`;
+
+    bindEvents();
+    renderFavorites();
+    renderDashboard();
+    renderHistory();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
