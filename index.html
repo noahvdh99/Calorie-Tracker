@@ -26,6 +26,9 @@
     --rose-glow: rgba(230, 183, 160, 0.28);
     --emerald: #45d6a4;
     --emerald-glow: rgba(69, 214, 164, 0.22);
+    --aqua: #62cbe8;
+    --aqua-strong: #3aa7d8;
+    --aqua-glow: rgba(98, 203, 232, 0.25);
     --danger: #e77c7c;
     --radius: 22px;
     --safe-b: env(safe-area-inset-bottom, 0px);
@@ -103,35 +106,7 @@
   }
 
   /* ---------- Hero (Tagesbilanz) ---------- */
-  .hero { text-align: center; padding: 34px 20px 24px; position: relative; }
-
-  .streak-pill {
-    position: absolute;
-    top: 13px; right: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
-    font-weight: 650;
-    color: #ffb35c;
-    background: rgba(255, 150, 60, 0.08);
-    border: 1px solid rgba(255, 160, 70, 0.28);
-    border-radius: 99px;
-    padding: 6px 11px;
-    text-shadow: 0 0 14px rgba(255, 150, 60, 0.55);
-    animation: streakGlow 2.8s ease-in-out infinite;
-    transition: opacity 0.4s, filter 0.4s;
-  }
-  @keyframes streakGlow {
-    50% { box-shadow: 0 0 16px rgba(255, 140, 50, 0.28); border-color: rgba(255, 170, 80, 0.45); }
-  }
-  .streak-pill .flame { font-size: 13px; filter: drop-shadow(0 0 6px rgba(255, 140, 50, 0.7)); }
-  .streak-pill.zero {
-    opacity: 0.3;
-    filter: grayscale(1);
-    animation: none;
-    text-shadow: none;
-  }
+  .hero { text-align: center; padding: 28px 20px 24px; }
   .hero .kcal-now {
     font-size: 58px;
     font-weight: 800;
@@ -181,6 +156,10 @@
     overflow: hidden;
   }
   .progress-fill.over { background: linear-gradient(90deg, var(--rose-strong), var(--danger)); }
+  .progress-fill.aqua {
+    background: linear-gradient(90deg, #2f86c9, var(--aqua) 85%);
+    box-shadow: 0 0 18px var(--aqua-glow);
+  }
   .progress-fill::after {
     content: "";
     position: absolute;
@@ -250,6 +229,56 @@
   .icon-btn:active { transform: scale(0.9); }
   .icon-btn.danger:active { color: var(--danger); border-color: var(--danger); }
   .icon-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+  /* ---------- Wassertracker ---------- */
+  .water-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .water-now {
+    font-size: 30px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(120deg, #d8f2fb, var(--aqua) 70%, var(--aqua-strong));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 3px 16px var(--aqua-glow));
+  }
+  .water-goal {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .water-goal .edit-hint { font-size: 11px; opacity: 0.65; margin-left: 3px; }
+  .water-track { margin-top: 12px; height: 10px; }
+  .water-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .water-btn {
+    flex: 1;
+    border: 1px solid rgba(98, 203, 232, 0.28);
+    background: rgba(98, 203, 232, 0.07);
+    color: var(--aqua);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    padding: 12px 0;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.2s, border-color 0.2s;
+  }
+  .water-btn:active { transform: scale(0.95); background: rgba(98, 203, 232, 0.16); border-color: var(--aqua); }
+  .water-btn.minus {
+    flex: 0 0 56px;
+    color: var(--text-dim);
+    border-color: var(--border);
+    background: var(--glass-strong);
+    font-size: 18px;
+  }
+  .water-btn.minus:active { color: var(--danger); border-color: var(--danger); background: rgba(231, 124, 124, 0.08); }
 
   /* ---------- Favoriten ---------- */
   .fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -336,10 +365,27 @@
     box-shadow: 0 0 8px var(--emerald-glow);
     flex-shrink: 0;
   }
-  .meal .m-info { flex: 1; min-width: 0; }
-  .meal .m-name { font-size: 14.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meal .m-info { flex: 1 1 auto; min-width: 0; margin-right: 4px; }
+  .meal .m-name {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 550;
+    line-height: 1.3;
+    white-space: normal;        /* Text darf flexibel umbrechen */
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
   .meal .m-time { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
-  .meal .m-kcal { font-size: 14px; font-weight: 650; color: var(--rose); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .meal .m-kcal {
+    flex: 0 0 auto;             /* wird niemals gestaucht oder überlappt */
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--rose);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .m-qty { white-space: nowrap; }
   .empty {
     text-align: center; color: var(--text-faint);
     font-size: 13.5px; padding: 22px 0 14px;
@@ -491,9 +537,6 @@
   <section class="view active" id="view-dashboard">
 
     <div class="card hero">
-      <div class="streak-pill zero" id="streak-pill" title="Tage in Folge im Kalorienziel">
-        <span class="flame">&#128293;</span><span id="streak-text">0 Tage</span>
-      </div>
       <div class="kcal-now" id="kcal-now">0</div>
       <div class="kcal-goal" id="goal-label" title="Tagesziel ändern">
         / 2.500 kcal <span class="edit-hint">&#9998;</span>
@@ -501,6 +544,22 @@
       <div class="remaining" id="remaining"></div>
       <div class="progress-track">
         <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Wasser</h2>
+      <div class="water-head">
+        <span class="water-now" id="water-now">0</span>
+        <span class="water-goal" id="water-goal-label" title="Wasserziel ändern">/ 2,5 Liter <span class="edit-hint">&#9998;</span></span>
+      </div>
+      <div class="progress-track water-track">
+        <div class="progress-fill aqua" id="water-fill"></div>
+      </div>
+      <div class="water-btns" id="water-btns">
+        <button class="water-btn" data-water="250">+ 250 ml</button>
+        <button class="water-btn" data-water="500">+ 500 ml</button>
+        <button class="water-btn minus" data-water="-250" aria-label="250 ml abziehen" title="250 ml abziehen">&minus;</button>
       </div>
     </div>
 
@@ -577,6 +636,14 @@
       <div class="chart-caption" id="chart-caption"></div>
     </div>
 
+    <div class="card">
+      <h2>Wasser</h2>
+      <div class="chart-wrap">
+        <canvas id="water-chart"></canvas>
+      </div>
+      <div class="chart-caption" id="water-chart-caption"></div>
+    </div>
+
   </section>
 
 </div>
@@ -624,6 +691,20 @@
   ];
   // 5–11 Uhr = Frühstück, 11–15 = Mittagessen, 17–22 = Abendessen, sonst Snacks
   const catForHour = (h) => (h >= 5 && h < 11) ? 'breakfast' : (h >= 11 && h < 15) ? 'lunch' : (h >= 17 && h < 22) ? 'dinner' : 'snack';
+  // Namens-Sicherheitsnetz: Schlüsselwörter im Gerichtsnamen schlagen die Uhrzeit
+  const CAT_KEYWORDS = [
+    ['breakfast', ['frühstück', 'morgen']],
+    ['lunch',     ['mittag']],
+    ['dinner',    ['abend']],
+    ['snack',     ['snack', 'riegel', 'shake']]
+  ];
+  function catForName(name) {
+    const n = name.toLowerCase();
+    for (const [cat, words] of CAT_KEYWORDS) {
+      if (words.some((w) => n.includes(w))) return cat;
+    }
+    return null;
+  }
   // Kategorie eines Eintrags – mit Fallback für Alt-Daten ohne cat-Feld
   const catOf = (e) => e.cat || (e.time ? catForHour(Number(e.time.split(':')[0])) : 'snack');
   const entryKcal = (e) => e.kcal * (e.qty || 1);
@@ -632,6 +713,7 @@
 
   let state = null;
   let chart = null;
+  let waterChart = null;
   let chartRange = 'week';
   let histDate = new Date();
   histDate.setHours(12, 0, 0, 0);
@@ -649,7 +731,7 @@
     save();
   }
 
-  // Alt-Daten sanft nachrüsten: qty- und cat-Felder ergänzen
+  // Alt-Daten sanft nachrüsten: qty-/cat-Felder und Wasser-Speicher ergänzen
   function migrate() {
     let dirty = false;
     Object.values(state.days).forEach((entries) => {
@@ -658,100 +740,30 @@
         if (!e.cat) { e.cat = catOf(e); dirty = true; }
       });
     });
+    if (!state.water) { state.water = {}; dirty = true; }
+    if (!state.waterGoal) { state.waterGoal = 2500; dirty = true; }
     if (dirty) save();
   }
 
-  // Streak: Tage in Folge, an denen getrackt wurde und das Ziel um max. 15 % überschritten ist.
-  // Heute zählt mit, sobald es die Regel erfüllt – bricht den Streak aber nur, wenn bereits überzogen.
-  function calcStreak() {
-    const limit = state.goal * 1.15;
-    const qualifies = (key) => { const t = totalFor(key); return t > 0 && t <= limit; };
-    let streak = 0;
-    if (totalFor(todayKey()) > limit) return 0;
-    if (qualifies(todayKey())) streak++;
-    const now = new Date();
-    const d = noonDate(now.getFullYear(), now.getMonth(), now.getDate());
-    for (;;) {
-      d.setDate(d.getDate() - 1);
-      if (!qualifies(dateKey(d))) break;
-      streak++;
-    }
-    return streak;
-  }
-
-  /* ================= Beispieldaten (erster Start) ================= */
+  /* ================= Erststart: sauberer Zustand ================= */
+  // Keine Demodaten – nur die Standard-Favoriten als Vorlage.
+  // Alle getrackten Kalorien, Tage und Wassermengen starten bei Null.
 
   function seed() {
-    const favorites = [
-      { id: uid(), name: 'Haferflocken Frühstück', kcal: 450 },
-      { id: uid(), name: 'Protein Shake', kcal: 250 },
-      { id: uid(), name: 'Hähnchen mit Reis', kcal: 650 },
-      { id: uid(), name: 'Magerquark mit Beeren', kcal: 220 },
-      { id: uid(), name: 'Vollkornbrot mit Ei', kcal: 380 },
-      { id: uid(), name: 'Apfel', kcal: 90 }
-    ];
-
-    const pool = {
-      breakfast: [
-        ['Haferflocken mit Banane', 430], ['Rührei mit Toast', 390],
-        ['Joghurt mit Müsli', 340], ['Käsebrötchen', 310], ['Porridge mit Beeren', 380]
+    return {
+      goal: 2500,
+      waterGoal: 2500, // ml
+      favorites: [
+        { id: uid(), name: 'Haferflocken Frühstück', kcal: 450 },
+        { id: uid(), name: 'Protein Shake', kcal: 250 },
+        { id: uid(), name: 'Hähnchen mit Reis', kcal: 650 },
+        { id: uid(), name: 'Magerquark mit Beeren', kcal: 220 },
+        { id: uid(), name: 'Vollkornbrot mit Ei', kcal: 380 },
+        { id: uid(), name: 'Apfel', kcal: 90 }
       ],
-      lunch: [
-        ['Hähnchen mit Reis', 650], ['Pasta Bolognese', 720], ['Linsensuppe mit Brot', 480],
-        ['Wrap mit Pute', 540], ['Gemüsepfanne mit Tofu', 460], ['Lachs mit Kartoffeln', 610]
-      ],
-      dinner: [
-        ['Brotzeit mit Käse', 520], ['Ofengemüse mit Feta', 450], ['Chili con Carne', 640],
-        ['Omelett mit Gemüse', 380], ['Pizza Margherita (halb)', 560], ['Salat mit Hähnchen', 420]
-      ],
-      snack: [
-        ['Protein Shake', 250], ['Apfel', 90], ['Handvoll Nüsse', 180],
-        ['Banane', 105], ['Proteinriegel', 210], ['Dunkle Schokolade (2 Stück)', 110]
-      ]
+      days: {},
+      water: {} // { 'YYYY-MM-DD': ml }
     };
-
-    // Deterministischer Pseudozufall, damit die Beispieldaten ruhig wirken
-    let s = 42;
-    const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
-
-    const days = {};
-    const now = new Date();
-    const start = noonDate(now.getFullYear(), 0, 1); // 1. Januar, 12:00 Uhr (DST-sicher)
-
-    for (let d = new Date(start); d < now; d.setDate(d.getDate() + 1)) {
-      if (dateKey(d) === todayKey()) break;
-      const entries = [];
-      const b = pick(pool.breakfast);
-      entries.push({ id: uid(), name: b[0], kcal: b[1], qty: 1, cat: 'breakfast', time: `0${7 + Math.floor(rnd() * 3)}:${pad(Math.floor(rnd() * 60))}`.slice(-5) });
-      const l = pick(pool.lunch);
-      entries.push({ id: uid(), name: l[0], kcal: l[1], qty: 1, cat: 'lunch', time: `${12 + Math.floor(rnd() * 2)}:${pad(Math.floor(rnd() * 60))}` });
-      const di = pick(pool.dinner);
-      entries.push({ id: uid(), name: di[0], kcal: di[1], qty: 1, cat: 'dinner', time: `${18 + Math.floor(rnd() * 3)}:${pad(Math.floor(rnd() * 60))}` });
-      if (rnd() > 0.35) {
-        const sn = pick(pool.snack);
-        entries.push({ id: uid(), name: sn[0], kcal: sn[1], qty: 1, cat: 'snack', time: `${15 + Math.floor(rnd() * 2)}:${pad(Math.floor(rnd() * 60))}` });
-      }
-      days[dateKey(d)] = entries;
-    }
-
-    // „Cheat Day" vor 3 Tagen (> Ziel + 15 %) → bricht den Streak dort und
-    // erzeugt einen sichtbaren Beispiel-Streak der letzten Tage
-    const cheat = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - 3);
-    days[dateKey(cheat)] = [
-      { id: uid(), name: 'Pancakes mit Sirup', kcal: 680, qty: 1, cat: 'breakfast', time: '09:40' },
-      { id: uid(), name: 'Burger mit Pommes', kcal: 1150, qty: 1, cat: 'lunch', time: '13:20' },
-      { id: uid(), name: 'Pizza Salami', kcal: 890, qty: 1, cat: 'dinner', time: '19:45' },
-      { id: uid(), name: 'Eis', kcal: 320, qty: 2, cat: 'snack', time: '21:10' }
-    ];
-
-    // Heute: schon etwas eingetragen, damit Dashboard, Kategorien und Streak sofort leben
-    days[todayKey()] = [
-      { id: uid(), name: 'Haferflocken Frühstück', kcal: 450, qty: 1, cat: 'breakfast', time: '08:10' },
-      { id: uid(), name: 'Protein Shake', kcal: 250, qty: 1, cat: 'snack', time: '11:30' }
-    ];
-
-    return { goal: 2500, favorites, days };
   }
 
   /* ================= Daten-Zugriff ================= */
@@ -763,7 +775,8 @@
   function addEntry(name, kcal, opts = {}) {
     const key = opts.key || todayKey();
     const now = new Date();
-    const cat = catForHour(now.getHours());
+    // Erst Schlüsselwörter im Namen prüfen, nur als Fallback die aktuelle Uhrzeit
+    const cat = catForName(name) || catForHour(now.getHours());
     if (opts.merge) {
       const existing = entriesFor(key).find((e) => e.name.toLowerCase() === name.toLowerCase() && catOf(e) === cat);
       if (existing) {
@@ -783,6 +796,16 @@
     if (!state.days[key]) return;
     state.days[key] = state.days[key].filter((e) => e.id !== id);
     if (state.days[key].length === 0) delete state.days[key];
+    save();
+  }
+
+  /* ---------- Wasser (tagesgenau, in ml) ---------- */
+  const waterFor = (key) => (state.water && state.water[key]) || 0;
+
+  function addWater(ml, key = todayKey()) {
+    const next = Math.max(0, waterFor(key) + ml);
+    if (next === 0) delete state.water[key];
+    else state.water[key] = next;
     save();
   }
 
@@ -818,15 +841,18 @@
 
   /* ================= Rendering: Dashboard ================= */
 
-  function renderStreak() {
-    const s = calcStreak();
-    const pill = $('#streak-pill');
-    $('#streak-text').textContent = s === 1 ? '1 Tag Streak' : `${s} Tage Streak`;
-    pill.classList.toggle('zero', s === 0);
+  const fmtL = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const liters = (ml) => fmtL.format(ml / 1000);
+
+  function renderWater() {
+    const ml = waterFor(todayKey());
+    $('#water-now').textContent = liters(ml);
+    $('#water-goal-label').innerHTML = `/ ${liters(state.waterGoal)} Liter <span class="edit-hint">&#9998;</span>`;
+    $('#water-fill').style.width = Math.min(100, (ml / state.waterGoal) * 100) + '%';
   }
 
   function renderDashboard() {
-    renderStreak();
+    renderWater();
     const total = totalFor(todayKey());
     const goal = state.goal;
     const pct = Math.min(100, (total / goal) * 100);
@@ -879,30 +905,22 @@
 
   /* ================= Rendering: Charts ================= */
 
-  function weekData() {
-    const labels = [], values = [];
+  // Letzte n Tage inkl. heute, als Dates (12:00 Uhr, DST-sicher)
+  function lastDays(n) {
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      labels.push(`${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}.`);
-      values.push(totalFor(dateKey(d)));
-    }
-    return { labels, values, caption: 'Exakte Kalorien der letzten 7 Tage' };
+    const arr = [];
+    for (let i = n - 1; i >= 0; i--) arr.push(noonDate(now.getFullYear(), now.getMonth(), now.getDate() - i));
+    return arr;
   }
 
-  function monthData() {
-    // Letzte 30 Tage als feine Einzel-Balken – zeigt den echten Kalorien-Rhythmus
+  // valueFn: Tages-Wert für einen dateKey (kcal oder Liter)
+  function daySeries(n, valueFn, labelFn) {
     const labels = [], values = [];
-    const now = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const d = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      labels.push(`${d.getDate()}.${d.getMonth() + 1}.`);
-      values.push(totalFor(dateKey(d)));
-    }
-    return { labels, values, caption: 'Tageskalorien der letzten 30 Tage' };
+    lastDays(n).forEach((d) => { labels.push(labelFn(d)); values.push(valueFn(dateKey(d))); });
+    return { labels, values };
   }
 
-  function yearData() {
+  function yearSeries(valueFn, round) {
     const now = new Date();
     const y = now.getFullYear();
     const labels = [], values = [];
@@ -912,20 +930,38 @@
       const daysInMonth = new Date(y, m + 1, 0).getDate();
       let sum = 0, cnt = 0;
       for (let day = 1; day <= daysInMonth; day++) {
-        const t = totalFor(dateKey(noonDate(y, m, day)));
-        if (t > 0) { sum += t; cnt++; }
+        const v = valueFn(dateKey(noonDate(y, m, day)));
+        if (v > 0) { sum += v; cnt++; }
       }
-      values.push(cnt ? Math.round(sum / cnt) : 0);
+      values.push(cnt ? round(sum / cnt) : 0);
     }
-    return { labels, values, caption: `Monatsdurchschnitt – ${y}` };
+    return { labels, values };
   }
 
+  const weekLabel = (d) => `${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}.`;
+  const dayLabel = (d) => `${d.getDate()}.${d.getMonth() + 1}.`;
+
+  function kcalData() {
+    if (chartRange === 'week') return { ...daySeries(7, totalFor, weekLabel), caption: 'Exakte Kalorien der letzten 7 Tage' };
+    if (chartRange === 'month') return { ...daySeries(30, totalFor, dayLabel), caption: 'Tageskalorien der letzten 30 Tage' };
+    return { ...yearSeries(totalFor, Math.round), caption: `Monatsdurchschnitt – ${new Date().getFullYear()}` };
+  }
+
+  function waterData() {
+    const inLiters = (key) => waterFor(key) / 1000;
+    if (chartRange === 'week') return { ...daySeries(7, inLiters, weekLabel), caption: 'Liter pro Tag – letzte 7 Tage' };
+    if (chartRange === 'month') return { ...daySeries(30, inLiters, dayLabel), caption: 'Liter pro Tag – letzte 30 Tage' };
+    return { ...yearSeries(inLiters, (v) => Math.round(v * 100) / 100), caption: `Täglicher Durchschnitt pro Monat – ${new Date().getFullYear()}` };
+  }
+
+  // Ziellinie: liest den Zielwert dynamisch aus options.goalValue()
   const goalLinePlugin = {
     id: 'goalLine',
     afterDatasetsDraw(c) {
       const { ctx, chartArea, scales } = c;
-      if (!scales.y || !chartArea) return;
-      const yPos = scales.y.getPixelForValue(state.goal);
+      const goalValue = c.options.goalValue ? c.options.goalValue() : null;
+      if (goalValue == null || !scales.y || !chartArea) return;
+      const yPos = scales.y.getPixelForValue(goalValue);
       if (yPos < chartArea.top || yPos > chartArea.bottom) return;
       ctx.save();
       ctx.strokeStyle = 'rgba(69, 214, 164, 0.5)';
@@ -942,79 +978,105 @@
     }
   };
 
-  function barGradient(context) {
-    const { ctx, chartArea } = context.chart;
-    if (!chartArea) return 'rgba(230, 183, 160, 0.8)';
-    const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-    g.addColorStop(0, 'rgba(230, 183, 160, 0.25)');
-    g.addColorStop(1, 'rgba(230, 183, 160, 0.95)');
-    return g;
+  function makeGradient(rgb) {
+    return (context) => {
+      const { ctx, chartArea } = context.chart;
+      if (!chartArea) return `rgba(${rgb}, 0.8)`;
+      const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+      g.addColorStop(0, `rgba(${rgb}, 0.25)`);
+      g.addColorStop(1, `rgba(${rgb}, 0.95)`);
+      return g;
+    };
   }
 
-  function renderChart() {
-    const data = chartRange === 'week' ? weekData() : chartRange === 'month' ? monthData() : yearData();
-    $('#chart-caption').textContent = data.caption;
-
-    if (!chart) {
-      chart = new Chart($('#chart'), {
-        type: 'bar',
-        data: {
-          labels: data.labels,
-          datasets: [{
-            data: data.values,
-            backgroundColor: barGradient,
-            hoverBackgroundColor: 'rgba(240, 207, 184, 1)',
-            borderRadius: 8,
-            borderSkipped: false,
-            maxBarThickness: 42
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: { duration: 700, easing: 'easeOutQuart' },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(17, 23, 38, 0.95)',
-              borderColor: 'rgba(255,255,255,0.1)',
-              borderWidth: 1,
-              titleColor: '#eef1f7',
-              bodyColor: '#e6b7a0',
-              padding: 12,
-              cornerRadius: 12,
-              displayColors: false,
-              callbacks: {
-                label: (item) => ` ${fmt.format(item.raw ?? 0)} kcal`
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: '#8b93a7', font: { size: 11 }, autoSkip: true, maxRotation: 0, maxTicksLimit: 12 },
-              border: { color: 'rgba(255,255,255,0.08)' }
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#5b6275', font: { size: 10 }, maxTicksLimit: 6 },
-              border: { display: false }
+  function makeBarChart(canvas, accent, formatValue, goalValue) {
+    return new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          data: [],
+          backgroundColor: makeGradient(accent.rgb),
+          hoverBackgroundColor: accent.hover,
+          borderRadius: 8,
+          borderSkipped: false,
+          maxBarThickness: 42
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 700, easing: 'easeOutQuart' },
+        goalValue,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(17, 23, 38, 0.95)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#eef1f7',
+            bodyColor: accent.tooltip,
+            padding: 12,
+            cornerRadius: 12,
+            displayColors: false,
+            callbacks: {
+              label: (item) => ` ${formatValue(item.raw ?? 0)}`
             }
           }
         },
-        plugins: [goalLinePlugin]
-      });
-    } else {
-      chart.data.labels = data.labels;
-      chart.data.datasets[0].data = data.values;
-    }
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#8b93a7', font: { size: 11 }, autoSkip: true, maxRotation: 0, maxTicksLimit: 12 },
+            border: { color: 'rgba(255,255,255,0.08)' }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#5b6275', font: { size: 10 }, maxTicksLimit: 6 },
+            border: { display: false }
+          }
+        }
+      },
+      plugins: [goalLinePlugin]
+    });
+  }
+
+  function applyChartData(ch, data) {
+    ch.data.labels = data.labels;
+    // Nie undefined/null/NaN an Chart.js geben – leere Tage sind explizit 0
+    ch.data.datasets[0].data = data.values.map((v) => (Number.isFinite(v) ? v : 0));
+    // Achse immer bis zur Ziellinie skalieren – so zeigt auch ein Tag ohne
+    // Einträge eine saubere, edle Achse mit leeren Balken statt grauer Fläche
+    const goal = ch.options.goalValue ? ch.options.goalValue() : 0;
+    ch.options.scales.y.suggestedMax = goal * 1.1;
     // Feinjustierung je nach Datendichte (30 schlanke Balken vs. 7/12 breite)
     const dense = data.labels.length > 12;
-    chart.data.datasets[0].borderRadius = dense ? 4 : 8;
-    chart.options.scales.x.ticks.maxTicksLimit = dense ? 8 : 12;
-    chart.options.scales.x.ticks.font.size = dense ? 10 : 11;
-    chart.update();
+    ch.data.datasets[0].borderRadius = dense ? 4 : 8;
+    ch.options.scales.x.ticks.maxTicksLimit = dense ? 8 : 12;
+    ch.options.scales.x.ticks.font.size = dense ? 10 : 11;
+    ch.update();
+  }
+
+  function renderCharts() {
+    if (!chart) {
+      chart = makeBarChart($('#chart'),
+        { rgb: '230, 183, 160', hover: 'rgba(240, 207, 184, 1)', tooltip: '#e6b7a0' },
+        (v) => `${fmt.format(v)} kcal`,
+        () => state.goal);
+    }
+    if (!waterChart) {
+      waterChart = makeBarChart($('#water-chart'),
+        { rgb: '98, 203, 232', hover: 'rgba(150, 224, 245, 1)', tooltip: '#62cbe8' },
+        (v) => `${fmtL.format(v)} l`,
+        () => state.waterGoal / 1000);
+    }
+    const kd = kcalData();
+    const wd = waterData();
+    $('#chart-caption').textContent = kd.caption;
+    $('#water-chart-caption').textContent = wd.caption;
+    applyChartData(chart, kd);
+    applyChartData(waterChart, wd);
   }
 
   /* ================= UI-Helfer ================= */
@@ -1037,7 +1099,7 @@
   function refreshAll() {
     renderDashboard();
     renderHistory();
-    if ($('#view-stats').classList.contains('active')) renderChart();
+    if ($('#view-stats').classList.contains('active')) renderCharts();
   }
 
   /* ================= Events ================= */
@@ -1120,6 +1182,33 @@
       refreshAll(); // aktualisiert Historie, Dashboard und Graphen
     });
 
+    // Wasser: Schnellauswahl (+250 / +500 / −250)
+    $('#water-btns').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-water]');
+      if (!btn) return;
+      const ml = Number(btn.dataset.water);
+      if (ml < 0 && waterFor(todayKey()) === 0) return; // nichts abzuziehen
+      addWater(ml);
+      haptic();
+      toast(ml > 0
+        ? `<span class="t-accent">+${fmt.format(ml)} ml</span>&nbsp; Wasser`
+        : `${fmt.format(ml)} ml Wasser`);
+      renderWater();
+    });
+
+    // Wasserziel ändern
+    $('#water-goal-label').addEventListener('click', () => {
+      const val = prompt('Neues Wasserziel in Litern (z. B. 2,5):', fmtL.format(state.waterGoal / 1000));
+      if (val === null) return;
+      const litersVal = parseFloat(String(val).replace(',', '.'));
+      if (litersVal >= 0.5 && litersVal <= 10) {
+        state.waterGoal = Math.round(litersVal * 1000);
+        save();
+        haptic();
+        renderWater();
+      }
+    });
+
     // Tagesziel ändern
     $('#goal-label').addEventListener('click', () => {
       const val = prompt('Neues Tagesziel (kcal):', state.goal);
@@ -1161,7 +1250,7 @@
       btn.classList.add('active');
       chartRange = btn.dataset.range;
       haptic();
-      renderChart();
+      renderCharts();
     });
 
     // Bottom-Navigation – flüssiger Wechsel:
@@ -1180,7 +1269,7 @@
         requestAnimationFrame(() => {
           if (btn.dataset.view === 'history') renderHistory();
           $('#view-' + btn.dataset.view).classList.add('active');
-          if (btn.dataset.view === 'stats') renderChart();
+          if (btn.dataset.view === 'stats') renderCharts();
         });
       });
     });
