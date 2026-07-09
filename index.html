@@ -691,12 +691,12 @@
   ];
   // 5–11 Uhr = Frühstück, 11–15 = Mittagessen, 17–22 = Abendessen, sonst Snacks
   const catForHour = (h) => (h >= 5 && h < 11) ? 'breakfast' : (h >= 11 && h < 15) ? 'lunch' : (h >= 17 && h < 22) ? 'dinner' : 'snack';
-  // Namens-Sicherheitsnetz: Schlüsselwörter im Gerichtsnamen schlagen die Uhrzeit
+  // Namens-Sicherheitsnetz: Diese Wörter im Gerichtsnamen schlagen die Uhrzeit.
+  // "Frühstück"/"Magerquark" -> fix Frühstück; "Apfel"/"Äpfel"/"Shake"/"Protein"/"Riegel" -> fix Snack.
+  // Alles andere (z. B. "Vollkornbrot mit Ei", "Hähnchen mit Reis") -> flexibel nach Uhrzeit.
   const CAT_KEYWORDS = [
-    ['breakfast', ['frühstück', 'morgen']],
-    ['lunch',     ['mittag']],
-    ['dinner',    ['abend']],
-    ['snack',     ['snack', 'riegel', 'shake']]
+    ['breakfast', ['frühstück', 'magerquark']],
+    ['snack',     ['apfel', 'äpfel', 'shake', 'protein', 'riegel']]
   ];
   function catForName(name) {
     const n = name.toLowerCase();
@@ -742,6 +742,16 @@
     });
     if (!state.water) { state.water = {}; dirty = true; }
     if (!state.waterGoal) { state.waterGoal = 2500; dirty = true; }
+    // Einmalige Bereinigung: Demo-Vergangenheit aus früheren Versionen entfernen.
+    // Löscht alle Tage vor heute – Favoriten und heutige Einträge bleiben erhalten.
+    // Das cleaned-Flag stellt sicher, dass ab dann die echte Historie unangetastet wächst.
+    if (!state.cleaned) {
+      const today = todayKey();
+      Object.keys(state.days).forEach((k) => { if (k < today) delete state.days[k]; });
+      Object.keys(state.water).forEach((k) => { if (k < today) delete state.water[k]; });
+      state.cleaned = true;
+      dirty = true;
+    }
     if (dirty) save();
   }
 
@@ -762,7 +772,8 @@
         { id: uid(), name: 'Apfel', kcal: 90 }
       ],
       days: {},
-      water: {} // { 'YYYY-MM-DD': ml }
+      water: {}, // { 'YYYY-MM-DD': ml }
+      cleaned: true // Neuinstallationen brauchen keine Bereinigung
     };
   }
 
@@ -792,11 +803,22 @@
     return entry;
   }
 
+  // Löschen: bei qty > 1 nur die Menge um 1 reduzieren (z. B. 5 Äpfel -> 4 Äpfel),
+  // erst bei qty = 1 den Eintrag komplett entfernen.
+  // Rückgabe: 'decremented' | 'removed' | null
   function removeEntry(id, key = todayKey()) {
-    if (!state.days[key]) return;
+    if (!state.days[key]) return null;
+    const target = state.days[key].find((e) => e.id === id);
+    if (!target) return null;
+    if ((target.qty || 1) > 1) {
+      target.qty -= 1;
+      save();
+      return 'decremented';
+    }
     state.days[key] = state.days[key].filter((e) => e.id !== id);
     if (state.days[key].length === 0) delete state.days[key];
     save();
+    return 'removed';
   }
 
   /* ---------- Wasser (tagesgenau, in ml) ---------- */
@@ -905,18 +927,41 @@
 
   /* ================= Rendering: Charts ================= */
 
-  // Letzte n Tage inkl. heute, als Dates (12:00 Uhr, DST-sicher)
-  function lastDays(n) {
+  // Jeder Wert wird garantiert als echte Zahl geliefert – nie undefined/null/NaN
+  const asNumber = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+  // Aktuelle Kalenderwoche: Montag bis Sonntag (12:00 Uhr, DST-sicher)
+  function currentWeekDates() {
     const now = new Date();
+    const monday = noonDate(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
     const arr = [];
-    for (let i = n - 1; i >= 0; i--) arr.push(noonDate(now.getFullYear(), now.getMonth(), now.getDate() - i));
+    for (let i = 0; i < 7; i++) arr.push(noonDate(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
     return arr;
   }
 
-  // valueFn: Tages-Wert für einen dateKey (kcal oder Liter)
-  function daySeries(n, valueFn, labelFn) {
+  // Aktueller Kalendermonat: 1. bis letzter Tag
+  function currentMonthDates() {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const dim = new Date(y, m + 1, 0).getDate();
+    const arr = [];
+    for (let d = 1; d <= dim; d++) arr.push(noonDate(y, m, d));
+    return arr;
+  }
+
+  // ISO-Kalenderwochen-Nummer (Mo als Wochenstart)
+  function isoWeek(d) {
+    const date = noonDate(d.getFullYear(), d.getMonth(), d.getDate());
+    date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    return 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+  }
+
+  // valueFn: Tages-Wert für einen dateKey (kcal oder Liter);
+  // Tage ohne localStorage-Eintrag (auch zukünftige) werden explizit als 0 befüllt
+  function seriesFor(dates, valueFn, labelFn) {
     const labels = [], values = [];
-    lastDays(n).forEach((d) => { labels.push(labelFn(d)); values.push(valueFn(dateKey(d))); });
+    dates.forEach((d) => { labels.push(labelFn(d)); values.push(asNumber(valueFn(dateKey(d)))); });
     return { labels, values };
   }
 
@@ -926,55 +971,86 @@
     const labels = [], values = [];
     for (let m = 0; m < 12; m++) {
       labels.push(MONTHS_SHORT[m]);
-      if (m > now.getMonth()) { values.push(null); continue; }
+      if (m > now.getMonth()) { values.push(0); continue; } // Zukunftsmonate: echte 0 statt null
       const daysInMonth = new Date(y, m + 1, 0).getDate();
       let sum = 0, cnt = 0;
       for (let day = 1; day <= daysInMonth; day++) {
-        const v = valueFn(dateKey(noonDate(y, m, day)));
+        const v = asNumber(valueFn(dateKey(noonDate(y, m, day))));
         if (v > 0) { sum += v; cnt++; }
       }
-      values.push(cnt ? round(sum / cnt) : 0);
+      values.push(cnt ? asNumber(round(sum / cnt)) : 0);
     }
     return { labels, values };
   }
 
   const weekLabel = (d) => `${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}.`;
-  const dayLabel = (d) => `${d.getDate()}.${d.getMonth() + 1}.`;
+  const dayLabel = (d) => `${d.getDate()}.`;
 
   function kcalData() {
-    if (chartRange === 'week') return { ...daySeries(7, totalFor, weekLabel), caption: 'Exakte Kalorien der letzten 7 Tage' };
-    if (chartRange === 'month') return { ...daySeries(30, totalFor, dayLabel), caption: 'Tageskalorien der letzten 30 Tage' };
-    return { ...yearSeries(totalFor, Math.round), caption: `Monatsdurchschnitt – ${new Date().getFullYear()}` };
+    const now = new Date();
+    if (chartRange === 'week') return { ...seriesFor(currentWeekDates(), totalFor, weekLabel), caption: `Kalorien pro Tag – KW ${isoWeek(now)}` };
+    if (chartRange === 'month') return { ...seriesFor(currentMonthDates(), totalFor, dayLabel), caption: `Kalorien pro Tag – ${MONTHS[now.getMonth()]} ${now.getFullYear()}` };
+    return { ...yearSeries(totalFor, Math.round), caption: `Monatsdurchschnitt – ${now.getFullYear()}` };
   }
 
   function waterData() {
     const inLiters = (key) => waterFor(key) / 1000;
-    if (chartRange === 'week') return { ...daySeries(7, inLiters, weekLabel), caption: 'Liter pro Tag – letzte 7 Tage' };
-    if (chartRange === 'month') return { ...daySeries(30, inLiters, dayLabel), caption: 'Liter pro Tag – letzte 30 Tage' };
-    return { ...yearSeries(inLiters, (v) => Math.round(v * 100) / 100), caption: `Täglicher Durchschnitt pro Monat – ${new Date().getFullYear()}` };
+    const now = new Date();
+    if (chartRange === 'week') return { ...seriesFor(currentWeekDates(), inLiters, weekLabel), caption: `Liter pro Tag – KW ${isoWeek(now)}` };
+    if (chartRange === 'month') return { ...seriesFor(currentMonthDates(), inLiters, dayLabel), caption: `Liter pro Tag – ${MONTHS[now.getMonth()]} ${now.getFullYear()}` };
+    return { ...yearSeries(inLiters, (v) => Math.round(v * 100) / 100), caption: `Täglicher Durchschnitt pro Monat – ${now.getFullYear()}` };
   }
 
-  // Ziellinie: liest den Zielwert dynamisch aus options.goalValue()
-  const goalLinePlugin = {
-    id: 'goalLine',
+  // Referenzlinien: Ziel (grün) + Durchschnitt (Akzentfarbe des Graphen).
+  // Werte liegen als Instanz-Eigenschaften ($goalValue, $avgValue, $avgColor) am Chart.
+  // WICHTIG: Funktionen dürfen NICHT in chart.options liegen – Chart.js 4 behandelt
+  // Funktionen in den Optionen als "scriptable" und ersetzt sie durch ihren Zahlenwert.
+  const refLinesPlugin = {
+    id: 'refLines',
     afterDatasetsDraw(c) {
       const { ctx, chartArea, scales } = c;
-      const goalValue = c.options.goalValue ? c.options.goalValue() : null;
-      if (goalValue == null || !scales.y || !chartArea) return;
-      const yPos = scales.y.getPixelForValue(goalValue);
-      if (yPos < chartArea.top || yPos > chartArea.bottom) return;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(69, 214, 164, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(chartArea.left, yPos);
-      ctx.lineTo(chartArea.right, yPos);
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(69, 214, 164, 0.8)';
-      ctx.font = '600 10px -apple-system, sans-serif';
-      ctx.fillText('Ziel', chartArea.right - 22, yPos - 5);
-      ctx.restore();
+      if (!scales.y || !chartArea) return;
+
+      const drawLine = (value, stroke, fill, dash, label, side) => {
+        if (value == null || !(value > 0)) return;
+        const yPos = scales.y.getPixelForValue(value);
+        if (yPos < chartArea.top || yPos > chartArea.bottom) return;
+        ctx.save();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1;
+        ctx.setLineDash(dash);
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, yPos);
+        ctx.lineTo(chartArea.right, yPos);
+        ctx.stroke();
+
+        // Label mit dunkler Pille hinterlegen, damit es auch über hohen
+        // Balken am Rand (erster/letzter Tag) immer lesbar bleibt
+        ctx.setLineDash([]);
+        ctx.font = '600 10px -apple-system, sans-serif';
+        const textW = ctx.measureText(label).width;
+        const x = side === 'right' ? chartArea.right - textW - 6 : chartArea.left + 6;
+        // Wenn die Linie zu nah am oberen Rand liegt, Label unter die Linie setzen
+        const below = yPos - 17 < chartArea.top;
+        const baseline = below ? yPos + 14 : yPos - 6;
+        const padX = 4;
+        const rx = x - padX, ry = baseline - 11, rw = textW + padX * 2, rh = 14;
+        ctx.fillStyle = 'rgba(10, 14, 22, 0.82)';
+        if (typeof ctx.roundRect === 'function') {
+          ctx.beginPath();
+          ctx.roundRect(rx, ry, rw, rh, 5);
+          ctx.fill();
+        } else {
+          ctx.fillRect(rx, ry, rw, rh);
+        }
+        ctx.fillStyle = fill;
+        ctx.fillText(label, x, baseline);
+        ctx.restore();
+      };
+
+      const goal = typeof c.$goalValue === 'function' ? c.$goalValue() : null;
+      drawLine(goal, 'rgba(69, 214, 164, 0.5)', 'rgba(69, 214, 164, 0.8)', [5, 5], 'Ziel', 'right');
+      drawLine(c.$avgValue, c.$avgColor || 'rgba(255,255,255,0.4)', c.$avgLabelColor || 'rgba(255,255,255,0.6)', [2, 4], 'Ø', 'left');
     }
   };
 
@@ -990,7 +1066,7 @@
   }
 
   function makeBarChart(canvas, accent, formatValue, goalValue) {
-    return new Chart(canvas, {
+    const instance = new Chart(canvas, {
       type: 'bar',
       data: {
         labels: [],
@@ -1007,7 +1083,6 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 700, easing: 'easeOutQuart' },
-        goalValue,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -1038,23 +1113,36 @@
           }
         }
       },
-      plugins: [goalLinePlugin]
+      plugins: [refLinesPlugin]
     });
+    // Außerhalb der options – hier fasst Chart.js nichts an
+    instance.$goalValue = goalValue;
+    instance.$avgColor = `rgba(${accent.rgb}, 0.55)`;
+    instance.$avgLabelColor = `rgba(${accent.rgb}, 0.85)`;
+    return instance;
   }
 
   function applyChartData(ch, data) {
     ch.data.labels = data.labels;
-    // Nie undefined/null/NaN an Chart.js geben – leere Tage sind explizit 0
-    ch.data.datasets[0].data = data.values.map((v) => (Number.isFinite(v) ? v : 0));
+    // Doppelte Absicherung: vollbesetztes, rein numerisches Array in Label-Länge
+    const clean = data.labels.map((_, i) => asNumber(data.values[i]));
+    ch.data.datasets[0].data = clean;
+    // Durchschnitt über die getrackten Tage der aktuellen Ansicht
+    // (0-Tage – z. B. zukünftige – zählen nicht rein, sonst verfälscht das den Schnitt)
+    const tracked = clean.filter((v) => v > 0);
+    ch.$avgValue = tracked.length ? tracked.reduce((a, b) => a + b, 0) / tracked.length : null;
     // Achse immer bis zur Ziellinie skalieren – so zeigt auch ein Tag ohne
     // Einträge eine saubere, edle Achse mit leeren Balken statt grauer Fläche
-    const goal = ch.options.goalValue ? ch.options.goalValue() : 0;
+    const goal = typeof ch.$goalValue === 'function' ? ch.$goalValue() : 0;
     ch.options.scales.y.suggestedMax = goal * 1.1;
     // Feinjustierung je nach Datendichte (30 schlanke Balken vs. 7/12 breite)
     const dense = data.labels.length > 12;
     ch.data.datasets[0].borderRadius = dense ? 4 : 8;
     ch.options.scales.x.ticks.maxTicksLimit = dense ? 8 : 12;
     ch.options.scales.x.ticks.font.size = dense ? 10 : 11;
+    // Falls das Canvas beim Erzeugen noch unsichtbar/0px war (Tab-Wechsel):
+    // Größe neu ermitteln, damit der Graph nicht als leere Fläche hängen bleibt
+    if (typeof ch.resize === 'function') ch.resize();
     ch.update();
   }
 
@@ -1162,13 +1250,14 @@
       refreshAll();
     });
 
-    // Löschen von heutigen Einträgen
+    // Löschen von heutigen Einträgen (bei Mengen > 1 wird nur 1x abgezogen)
     $('#today-list').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-del]');
       if (!btn) return;
-      removeEntry(btn.dataset.del);
+      const result = removeEntry(btn.dataset.del);
+      if (!result) return;
       haptic(20);
-      toast('Eintrag gelöscht');
+      toast(result === 'decremented' ? '1&times; entfernt' : 'Eintrag gelöscht');
       refreshAll();
     });
 
@@ -1176,9 +1265,10 @@
     $('#hist-list').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-del]');
       if (!btn) return;
-      removeEntry(btn.dataset.del, dateKey(histDate));
+      const result = removeEntry(btn.dataset.del, dateKey(histDate));
+      if (!result) return;
       haptic(20);
-      toast('Eintrag gelöscht');
+      toast(result === 'decremented' ? '1&times; entfernt' : 'Eintrag gelöscht');
       refreshAll(); // aktualisiert Historie, Dashboard und Graphen
     });
 
