@@ -808,7 +808,7 @@
   </div>
 </nav>
 
-<div class="scanner-overlay" id="scanner-overlay" hidden>
+<div class="scanner-overlay" id="scanner-modal" hidden>
   <div class="scanner-card">
     <h2>Barcode scannen</h2>
     <div class="scanner-frame">
@@ -820,7 +820,7 @@
   </div>
 </div>
 
-<div class="scanner-overlay" id="portion-overlay" hidden>
+<div class="scanner-overlay" id="portion-modal" hidden>
   <div class="scanner-card">
     <h2>Produkt gefunden</h2>
     <div class="portion-product" id="portion-name">&ndash;</div>
@@ -832,14 +832,14 @@
     <div class="portion-grid" id="portion-grid">
       <button data-amount="100" class="active">100 g/ml</button>
       <button data-amount="150">150 g/ml</button>
+      <button data-amount="200">200 g/ml</button>
       <button data-amount="250">250 g/ml</button>
+      <button data-amount="300">300 g/ml</button>
       <button data-amount="500">500 g/ml</button>
-      <button data-amount="200">2&times; (200g)</button>
-      <button data-amount="300">3&times; (300g)</button>
     </div>
     <div class="portion-actions">
       <button class="btn ghost" id="portion-cancel">Abbrechen</button>
-      <button class="btn" id="portion-confirm">Bestätigen</button>
+      <button class="btn" id="portion-confirm">Hinzufügen</button>
     </div>
   </div>
 </div>
@@ -1384,7 +1384,7 @@
   let scannerBusy = false; // verhindert Doppel-Treffer desselben Barcodes
 
   function closeScanner() {
-    const overlay = $('#scanner-overlay');
+    const overlay = $('#scanner-modal');
     const done = () => { overlay.hidden = true; };
     if (scanner) {
       const s = scanner;
@@ -1430,14 +1430,14 @@
     });
   }
 
-  function openScanner() {
+  async function openScanner() {
     if (typeof Html5Qrcode === 'undefined') {
       toast('Scanner nicht verfügbar – bitte mit Internetverbindung öffnen');
       return;
     }
     if (scanner) return;
     scannerBusy = false;
-    $('#scanner-overlay').hidden = false;
+    $('#scanner-modal').hidden = false;
     try {
       // Nur EAN-13/EAN-8 (Lebensmittel-Barcodes) – macht die Erkennung schneller
       scanner = new Html5Qrcode('scanner-preview', {
@@ -1447,7 +1447,26 @@
     } catch (e) {
       scanner = new Html5Qrcode('scanner-preview');
     }
-    const savedId = getSavedCamera();
+
+    let savedId = getSavedCamera();
+    // Einmalige Vorab-Freigabe über getUserMedia: der direkteste Weg, wie
+    // iOS/Android die Kamera-Berechtigung erteilen und im Browser dauerhaft
+    // speichern. Die dabei ermittelte Rückkamera-ID merken wir uns sofort.
+    if (!savedId && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const track = stream.getVideoTracks()[0];
+        const id = track && track.getSettings ? track.getSettings().deviceId : null;
+        // Temp-Stream sofort freigeben, sonst blockiert er die Kamera für die Bibliothek
+        stream.getTracks().forEach((t) => t.stop());
+        if (id) { saveCamera(id); savedId = id; }
+      } catch (e) {
+        // Berechtigung verweigert o. Ä. – der Startversuch unten meldet das sauber
+      }
+    }
+    // Nutzer könnte das Overlay während der Freigabe geschlossen haben
+    if (!scanner) return;
+
     if (savedId) startScanner({ deviceId: { exact: savedId } }, false);
     else startScanner({ facingMode: 'environment' }, true); // Rückkamera bevorzugen
   }
@@ -1502,12 +1521,12 @@
     $('#portion-base').textContent = `${fmt.format(Math.round(kcal100))} kcal pro 100 g/ml`;
     $('#portion-amount').value = 100;
     selectPortionButton(100);
-    $('#portion-overlay').hidden = false;
+    $('#portion-modal').hidden = false;
   }
 
   function closePortionDialog() {
     pendingProduct = null; // temporäre Daten sauber verwerfen
-    $('#portion-overlay').hidden = true;
+    $('#portion-modal').hidden = true;
   }
 
   function confirmPortion() {
@@ -1518,9 +1537,10 @@
     const kcal = Math.round((pendingProduct.kcal100 / 100) * amount);
     $('#inp-name').value = `${pendingProduct.name} (${amount}g)`;
     $('#inp-kcal').value = kcal;
-    haptic();
-    toast(`<span class="t-accent">${fmt.format(kcal)} kcal</span>&nbsp; ${esc(pendingProduct.name)} (${amount}g)`);
     closePortionDialog();
+    // Bestehende Hinzufügen-Funktion triggern → Produkt landet sofort in der
+    // Tagesliste (inkl. Kategorie-Zuordnung, Toast, Haptik und Refresh)
+    $('#btn-add').click();
   }
 
   /* ================= Events ================= */
@@ -1608,7 +1628,7 @@
     // Barcode-Scanner öffnen/schließen
     $('#btn-scan').addEventListener('click', () => { haptic(); openScanner(); });
     $('#scanner-cancel').addEventListener('click', () => { haptic(); closeScanner(); });
-    $('#scanner-overlay').addEventListener('click', (e) => {
+    $('#scanner-modal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeScanner(); // Tipp auf den Hintergrund
     });
 
@@ -1627,7 +1647,7 @@
     $('#portion-amount').addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmPortion(); });
     $('#portion-confirm').addEventListener('click', confirmPortion);
     $('#portion-cancel').addEventListener('click', () => { haptic(); closePortionDialog(); });
-    $('#portion-overlay').addEventListener('click', (e) => {
+    $('#portion-modal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closePortionDialog();
     });
 
