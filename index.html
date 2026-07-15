@@ -376,6 +376,129 @@
     box-shadow: none;
   }
 
+  /* ---------- Intervallfasten ---------- */
+  .fast-ring-wrap {
+    position: relative;
+    width: 185px;
+    margin: 2px auto 8px;
+  }
+  .fast-ring { display: block; width: 100%; height: auto; transform: rotate(-90deg); }
+  .fast-track { fill: none; stroke: rgba(255, 255, 255, 0.06); stroke-width: 10; }
+  .fast-progress {
+    fill: none;
+    stroke: url(#fastGradient);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.6s linear;
+    filter: drop-shadow(0 0 8px var(--emerald-glow));
+  }
+  .fast-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+  .fast-time {
+    font-size: 29px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .fast-sub {
+    font-size: 10.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    font-weight: 600;
+  }
+  .fast-state { text-align: center; margin: 8px 0 16px; }
+  .fast-state .fs-name {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 700;
+    background: linear-gradient(120deg, var(--emerald), var(--rose));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 3px;
+  }
+  .fast-state .fs-desc { font-size: 12px; color: var(--text-dim); }
+  #fast-method { margin-bottom: 14px; }
+  .btn.fast-active {
+    color: #06251a;
+    background: linear-gradient(120deg, #8ce8c8, var(--emerald) 60%, #2fbf8e);
+    box-shadow: 0 6px 20px var(--emerald-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  .fastbreak-text {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .fastbreak-text b { color: var(--rose); font-weight: 650; }
+
+  #fast-suggest {
+    position: fixed;
+    left: 50%;
+    bottom: calc(148px + var(--safe-b));
+    transform: translateX(-50%) translateY(16px);
+    width: min(400px, calc(100vw - 40px));
+    background: rgba(20, 26, 40, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(230, 183, 160, 0.35);
+    border-radius: 16px;
+    padding: 13px 18px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--rose-glow);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 100;
+  }
+  #fast-suggest.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #fast-suggest b { color: var(--rose); font-weight: 650; }
+  #fast-suggest:active { transform: translateX(-50%) scale(0.97); }
+
+  .phase-list { list-style: none; }
+  .phase-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 10px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .phase-item .p-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    margin-top: 6px;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .phase-item.active {
+    background: rgba(69, 214, 164, 0.07);
+    border-color: rgba(69, 214, 164, 0.25);
+  }
+  .phase-item.active .p-dot { background: var(--emerald); box-shadow: 0 0 8px var(--emerald-glow); }
+  .phase-item .p-name { font-size: 14px; font-weight: 650; }
+  .phase-item .p-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .phase-item .p-hours {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+
   /* ---------- Wassertracker ---------- */
   .water-head {
     display: flex;
@@ -622,9 +745,9 @@
     background: transparent;
     color: var(--text-dim);
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
-    padding: 10px 18px;
+    padding: 10px 13px;
     border-radius: 15px;
     cursor: pointer;
     display: flex;
@@ -772,6 +895,43 @@
 
   </section>
 
+  <!-- ================= INTERVALLFASTEN ================= -->
+  <section class="view" id="view-fasting">
+
+    <div class="card">
+      <h2>Intervallfasten</h2>
+      <div class="fast-ring-wrap">
+        <svg class="fast-ring" viewBox="0 0 200 200" aria-hidden="true">
+          <defs>
+            <linearGradient id="fastGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#45d6a4"/>
+              <stop offset="100%" stop-color="#e6b7a0"/>
+            </linearGradient>
+          </defs>
+          <circle class="fast-track" cx="100" cy="100" r="88"/>
+          <circle class="fast-progress" id="fast-progress" cx="100" cy="100" r="88"/>
+        </svg>
+        <div class="fast-center">
+          <div class="fast-time" id="fast-time">16:00:00</div>
+          <div class="fast-sub" id="fast-sub">bereit</div>
+        </div>
+      </div>
+      <div class="fast-state" id="fast-state"></div>
+      <div class="segmented" id="fast-method">
+        <button data-hours="16" class="active">16:8</button>
+        <button data-hours="18">18:6</button>
+        <button data-hours="20">20:4</button>
+      </div>
+      <button class="btn" id="fast-toggle">Fasten starten</button>
+    </div>
+
+    <div class="card">
+      <h2>Fasten-Phasen</h2>
+      <ul class="phase-list" id="phase-list"></ul>
+    </div>
+
+  </section>
+
   <!-- ================= STATISTIK ================= -->
   <section class="view" id="view-stats">
 
@@ -796,6 +956,15 @@
       <div class="chart-caption" id="water-chart-caption"></div>
     </div>
 
+    <div class="card">
+      <h2>Fasten-Trend</h2>
+      <div class="chart-wrap" id="fast-chart-wrap">
+        <canvas id="fast-chart"></canvas>
+      </div>
+      <div class="empty" id="fast-chart-empty" hidden>Noch keine Fastendaten in diesem Zeitraum &ndash; beende ein Fasten, um deinen Trend zu sehen.</div>
+      <div class="chart-caption" id="fast-chart-caption"></div>
+    </div>
+
   </section>
 
 </div>
@@ -803,6 +972,7 @@
 <nav>
   <div class="nav-inner">
     <button data-view="dashboard" class="active"><span class="ico">&#9679;</span>Heute</button>
+    <button data-view="fasting"><span class="ico">&#9681;</span>Fasten</button>
     <button data-view="history"><span class="ico">&#9776;</span>Historie</button>
     <button data-view="stats"><span class="ico">&#10148;</span>Statistik</button>
   </div>
@@ -843,6 +1013,19 @@
     </div>
   </div>
 </div>
+
+<div class="scanner-overlay" id="fastbreak-modal" hidden>
+  <div class="scanner-card">
+    <h2>Aktives Fasten brechen?</h2>
+    <p class="fastbreak-text" id="fastbreak-text"></p>
+    <div class="portion-actions">
+      <button class="btn ghost" id="fastbreak-no">Nein, weiter fasten</button>
+      <button class="btn" id="fastbreak-yes">Ja, Fasten beenden</button>
+    </div>
+  </div>
+</div>
+
+<div id="fast-suggest" hidden>War das deine letzte Mahlzeit für heute? <b>Tippe hier</b>, um dein Fastenfenster direkt zu starten.</div>
 
 <div id="toast"></div>
 
@@ -902,6 +1085,7 @@
   let state = null;
   let chart = null;
   let waterChart = null;
+  let fastChart = null;
   let chartRange = 'week';
   let histDate = new Date();
   histDate.setHours(12, 0, 0, 0);
@@ -930,6 +1114,13 @@
     });
     if (!state.water) { state.water = {}; dirty = true; }
     if (!state.waterGoal) { state.waterGoal = 2500; dirty = true; }
+    if (typeof state.fastingActive === 'undefined') {
+      state.fastingActive = false;
+      state.fastStartTime = null;
+      state.fastMethod = 16;
+      dirty = true;
+    }
+    if (!state.fastingHistory) { state.fastingHistory = []; dirty = true; }
     // Einmalige Bereinigung: Demo-Vergangenheit aus früheren Versionen entfernen.
     // Löscht alle Tage vor heute – Favoriten und heutige Einträge bleiben erhalten.
     // Das cleaned-Flag stellt sicher, dass ab dann die echte Historie unangetastet wächst.
@@ -961,6 +1152,10 @@
       ],
       days: {},
       water: {}, // { 'YYYY-MM-DD': ml }
+      fastingActive: false,
+      fastStartTime: null, // fester Zeitstempel (Date.now()) – überlebt App-Neustarts
+      fastMethod: 16,      // Fastenstunden: 16 (16:8), 18 (18:6) oder 20 (20:4)
+      fastingHistory: [],  // [{ date, durationHours, targetHours }] – Basis für spätere Statistik
       cleaned: true // Neuinstallationen brauchen keine Bereinigung
     };
   }
@@ -1189,6 +1384,34 @@
     return { ...yearSeries(inLiters, (v) => Math.round(v * 100) / 100), caption: `Täglicher Durchschnitt pro Monat – ${now.getFullYear()}` };
   }
 
+  // Fastenstunden eines Tages: die längste an diesem Datum beendete Fastenphase
+  function fastHoursFor(key) {
+    let best = 0;
+    (state.fastingHistory || []).forEach((e) => {
+      if (e.date === key && e.durationHours > best) best = e.durationHours;
+    });
+    return best;
+  }
+
+  function fastData() {
+    const now = new Date();
+    if (chartRange === 'week') return { ...seriesFor(currentWeekDates(), fastHoursFor, weekLabel), caption: `Fastenstunden pro Tag – KW ${isoWeek(now)}` };
+    if (chartRange === 'month') return { ...seriesFor(currentMonthDates(), fastHoursFor, dayLabel), caption: `Fastenstunden pro Tag – ${MONTHS[now.getMonth()]} ${now.getFullYear()}` };
+    return { ...yearSeries(fastHoursFor, (v) => Math.round(v * 10) / 10), caption: `Durchschnittliche Fastenstunden pro Monat – ${now.getFullYear()}` };
+  }
+
+  // Dynamische Balkenfarbe: Smaragd bei erreichtem Ziel, Pastell-Orange darunter
+  function fastBarColor(context) {
+    const v = Number(context.raw) || 0;
+    const rgb = v >= state.fastMethod ? '69, 214, 164' : '242, 166, 121';
+    const { ctx, chartArea } = context.chart;
+    if (!chartArea) return `rgba(${rgb}, 0.8)`;
+    const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    g.addColorStop(0, `rgba(${rgb}, 0.25)`);
+    g.addColorStop(1, `rgba(${rgb}, 0.95)`);
+    return g;
+  }
+
   // Referenzlinien: Ziel (grün) + Durchschnitt (Akzentfarbe des Graphen).
   // Werte liegen als Instanz-Eigenschaften ($goalValue, $avgValue, $avgColor) am Chart.
   // WICHTIG: Funktionen dürfen NICHT in chart.options liegen – Chart.js 4 behandelt
@@ -1347,12 +1570,27 @@
         (v) => `${fmtL.format(v)} l`,
         () => state.waterGoal / 1000);
     }
+    if (!fastChart) {
+      fastChart = makeBarChart($('#fast-chart'),
+        { rgb: '69, 214, 164', hover: 'rgba(140, 232, 200, 1)', tooltip: '#45d6a4' },
+        (v) => `${fmtL.format(v)} Std.`,
+        () => state.fastMethod);
+      // Balkenfarbe pro Wert: grün ab Ziel, orange darunter
+      fastChart.data.datasets[0].backgroundColor = fastBarColor;
+    }
     const kd = kcalData();
     const wd = waterData();
+    const fd = fastData();
     $('#chart-caption').textContent = kd.caption;
     $('#water-chart-caption').textContent = wd.caption;
     applyChartData(chart, kd);
     applyChartData(waterChart, wd);
+    // Fasten-Trend: bei fehlenden Daten im Zeitraum eleganter Platzhalter statt leerem Chart
+    const hasFastData = fd.values.some((v) => v > 0);
+    $('#fast-chart-wrap').hidden = !hasFastData;
+    $('#fast-chart-empty').hidden = hasFastData;
+    $('#fast-chart-caption').textContent = hasFastData ? fd.caption : '';
+    if (hasFastData) applyChartData(fastChart, fd);
   }
 
   /* ================= UI-Helfer ================= */
@@ -1376,6 +1614,151 @@
     renderDashboard();
     renderHistory();
     if ($('#view-stats').classList.contains('active')) renderCharts();
+  }
+
+  /* ================= Intervallfasten ================= */
+
+  const FAST_STATES = [
+    { maxH: 4,        name: 'Verdauung',          desc: 'Körper verarbeitet die letzte Nahrung' },
+    { maxH: 12,       name: 'Anaboler Übergang',  desc: 'Blutzucker sinkt, Fettverbrennung bereitet sich vor' },
+    { maxH: 16,       name: 'Fettverbrennung',    desc: 'Körper greift aktiv Fettreserven an' },
+    { maxH: Infinity, name: 'Autophagie',         desc: 'Zellreinigung & maximale Regeneration' }
+  ];
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 88; // r=88 aus dem SVG
+
+  function formatHMS(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+
+  function renderPhaseList(hoursNow) {
+    let prev = 0;
+    $('#phase-list').innerHTML = FAST_STATES.map((s) => {
+      const range = s.maxH === Infinity ? `ab ${prev} Std.` : `${prev}&ndash;${s.maxH} Std.`;
+      const active = hoursNow != null && hoursNow >= prev && hoursNow < s.maxH;
+      const item = `
+        <li class="phase-item${active ? ' active' : ''}">
+          <span class="p-dot"></span>
+          <span><span class="p-name">${s.name}</span><div class="p-desc">${s.desc}</div></span>
+          <span class="p-hours">${range}</span>
+        </li>`;
+      prev = s.maxH;
+      return item;
+    }).join('');
+  }
+
+  function renderFasting() {
+    const ring = $('#fast-progress');
+    const btn = $('#fast-toggle');
+    const goalMs = state.fastMethod * 3600000;
+
+    document.querySelectorAll('#fast-method button').forEach((b) => {
+      b.classList.toggle('active', Number(b.dataset.hours) === state.fastMethod);
+    });
+
+    if (!state.fastingActive || !state.fastStartTime) {
+      ring.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      $('#fast-time').textContent = formatHMS(goalMs);
+      $('#fast-sub').textContent = 'bereit';
+      $('#fast-state').innerHTML = '<span class="fs-name">Kein aktives Fasten</span><span class="fs-desc">Starte nach deiner letzten Mahlzeit des Tages</span>';
+      btn.textContent = 'Fasten starten';
+      btn.classList.remove('fast-active');
+      renderPhaseList(null);
+      return;
+    }
+
+    // Fester Start-Zeitstempel → exakte Differenz, auch nach App-Neustart
+    const elapsed = Date.now() - state.fastStartTime;
+    const remaining = goalMs - elapsed;
+    const progress = Math.min(1, elapsed / goalMs);
+    ring.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - progress);
+
+    if (remaining > 0) {
+      $('#fast-time').textContent = formatHMS(remaining);
+      $('#fast-sub').textContent = 'bis Ziel';
+    } else {
+      $('#fast-time').textContent = formatHMS(elapsed);
+      $('#fast-sub').textContent = 'Ziel erreicht';
+    }
+
+    const hours = elapsed / 3600000;
+    const st = FAST_STATES.find((x) => hours < x.maxH);
+    $('#fast-state').innerHTML = `<span class="fs-name">${st.name}</span><span class="fs-desc">${st.desc}</span>`;
+    btn.textContent = 'Fasten beenden / Essen starten';
+    btn.classList.add('fast-active');
+    renderPhaseList(hours);
+  }
+
+  function startFasting() {
+    state.fastingActive = true;
+    state.fastStartTime = Date.now();
+    save();
+    haptic();
+    renderFasting();
+    toast(`<span class="t-accent">Fasten gestartet</span>&nbsp; ${state.fastMethod}:${24 - state.fastMethod}`);
+  }
+
+  let lastFastEndAt = 0; // verhindert, dass direkt nach dem Fastenbrechen ein neuer Start vorgeschlagen wird
+
+  // Beendet das Fasten und schreibt die erreichte Dauer in die Historie
+  function endFasting() {
+    if (!state.fastingActive || !state.fastStartTime) return;
+    const durationHours = Math.round(((Date.now() - state.fastStartTime) / 3600000) * 100) / 100;
+    state.fastingHistory.push({ date: todayKey(), durationHours, targetHours: state.fastMethod });
+    state.fastingActive = false;
+    state.fastStartTime = null;
+    lastFastEndAt = Date.now();
+    save();
+    renderFasting();
+  }
+
+  function toggleFasting() {
+    if (state.fastingActive) {
+      endFasting();
+      haptic();
+      toast('Fasten beendet – guten Appetit!');
+    } else {
+      startFasting();
+    }
+  }
+
+  /* ---------- Smarte Kopplung: Fasten & Mahlzeiten ---------- */
+
+  let pendingMealAction = null; // wartende Eintrag-Aktion, solange das Modal offen ist
+
+  // Führt die Eintrag-Aktion aus – oder fragt erst nach, wenn gerade gefastet wird
+  function guardFasting(action) {
+    if (!state.fastingActive || !state.fastStartTime) { action(); return; }
+    pendingMealAction = action;
+    const hours = (Date.now() - state.fastStartTime) / 3600000;
+    const st = FAST_STATES.find((x) => hours < x.maxH);
+    const h = fmtL.format(Math.round(hours * 10) / 10);
+    $('#fastbreak-text').innerHTML =
+      `Du fastest gerade seit <b>${h} Stunden</b> und befindest dich in der Phase: <b>${st.name}</b>. ` +
+      'Möchtest du dein Fasten beenden, um diese Mahlzeit einzutragen?';
+    $('#fastbreak-modal').hidden = false;
+  }
+
+  // Dezent klickbarer Abend-Hinweis: Fastenfenster direkt nach der letzten Mahlzeit starten
+  let suggestTimer = null;
+  function maybeSuggestFasting() {
+    if (state.fastingActive) return;
+    if (new Date().getHours() < 18) return;                 // erst am späten Nachmittag/Abend
+    if (Date.now() - lastFastEndAt < 2 * 60 * 1000) return; // nicht direkt nach dem Fastenbrechen
+    const el = $('#fast-suggest');
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add('show'));
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(hideFastingSuggestion, 8000);
+  }
+  function hideFastingSuggestion() {
+    const el = $('#fast-suggest');
+    el.classList.remove('show');
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(() => { el.hidden = true; }, 300);
   }
 
   /* ================= Barcode-Scanner ================= */
@@ -1437,6 +1820,21 @@
     }
     if (scanner) return;
     scannerBusy = false;
+
+    // Permissions API: Ist die Kamera dauerhaft blockiert, hilft nur der
+    // Browser-Dialog – dem Nutzer den Weg zeigen statt stumm zu scheitern.
+    // Bei "granted" erscheint keine Abfrage mehr; das nutzen Browser, die die
+    // Freigabe gespeichert haben (Android; iOS-Safari via Website-Einstellungen).
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const perm = await navigator.permissions.query({ name: 'camera' });
+        if (perm.state === 'denied') {
+          toast('Kamera blockiert – bitte in den Browser-Einstellungen für diese Seite erlauben');
+          return;
+        }
+      }
+    } catch (e) { /* Permissions API nicht verfügbar (z. B. älteres iOS) – normal fortfahren */ }
+
     $('#scanner-modal').hidden = false;
     try {
       // Nur EAN-13/EAN-8 (Lebensmittel-Barcodes) – macht die Erkennung schneller
@@ -1474,8 +1872,8 @@
   function onBarcode(barcode) {
     if (scannerBusy) return;
     scannerBusy = true;
-    haptic(30);
-    closeScanner(); // Kamera sofort stoppen
+    haptic([45, 40, 45]); // Doppel-Puls (Android; iOS unterstützt Vibration nicht)
+    closeScanner();       // Kamera sofort stoppen
     toast('Suche Produkt…');
     fetchProduct(barcode);
   }
@@ -1555,12 +1953,15 @@
       const kcal = Math.round(Number(kcalInp.value));
       if (!name) { nameInp.focus(); return; }
       if (!kcal || kcal <= 0) { kcalInp.focus(); return; }
-      addEntry(name, kcal);
-      nameInp.value = '';
-      kcalInp.value = '';
-      haptic();
-      toast(`<span class="t-accent">+${fmt.format(kcal)} kcal</span>&nbsp; ${esc(name)}`);
-      refreshAll();
+      guardFasting(() => {
+        addEntry(name, kcal);
+        nameInp.value = '';
+        kcalInp.value = '';
+        haptic();
+        toast(`<span class="t-accent">+${fmt.format(kcal)} kcal</span>&nbsp; ${esc(name)}`);
+        refreshAll();
+        maybeSuggestFasting();
+      });
     };
     $('#btn-add').addEventListener('click', submit);
     kcalInp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
@@ -1596,11 +1997,14 @@
       if (!card) return;
       const fav = state.favorites.find((f) => f.id === card.dataset.fav);
       if (!fav) return;
-      const entry = addEntry(fav.name, fav.kcal, { merge: true });
-      haptic();
-      const qtyInfo = (entry.qty || 1) > 1 ? ` (${entry.qty}&times;)` : '';
-      toast(`<span class="t-accent">+${fmt.format(fav.kcal)} kcal</span>&nbsp; ${esc(fav.name)}${qtyInfo}`);
-      refreshAll();
+      guardFasting(() => {
+        const entry = addEntry(fav.name, fav.kcal, { merge: true });
+        haptic();
+        const qtyInfo = (entry.qty || 1) > 1 ? ` (${entry.qty}&times;)` : '';
+        toast(`<span class="t-accent">+${fmt.format(fav.kcal)} kcal</span>&nbsp; ${esc(fav.name)}${qtyInfo}`);
+        refreshAll();
+        maybeSuggestFasting();
+      });
     });
 
     // Löschen von heutigen Einträgen (bei Mengen > 1 wird nur 1x abgezogen)
@@ -1623,6 +2027,41 @@
       haptic(20);
       toast(result === 'decremented' ? '1&times; entfernt' : 'Eintrag gelöscht');
       refreshAll(); // aktualisiert Historie, Dashboard und Graphen
+    });
+
+    // Intervallfasten
+    $('#fast-toggle').addEventListener('click', toggleFasting);
+
+    // Fasten-brechen-Modal
+    $('#fastbreak-yes').addEventListener('click', () => {
+      $('#fastbreak-modal').hidden = true;
+      const action = pendingMealAction;
+      pendingMealAction = null;
+      endFasting(); // schreibt die erreichte Dauer in die Historie
+      haptic();
+      if (action) action();
+    });
+    $('#fastbreak-no').addEventListener('click', () => {
+      pendingMealAction = null; // Eintrag verwerfen, Eingaben bleiben stehen
+      $('#fastbreak-modal').hidden = true;
+      haptic();
+    });
+    $('#fastbreak-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) { pendingMealAction = null; e.currentTarget.hidden = true; }
+    });
+
+    // Abend-Hinweis: Klick startet das Fastenfenster sofort
+    $('#fast-suggest').addEventListener('click', () => {
+      hideFastingSuggestion();
+      startFasting();
+    });
+    $('#fast-method').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-hours]');
+      if (!btn) return;
+      state.fastMethod = Number(btn.dataset.hours);
+      save();
+      haptic();
+      renderFasting(); // läuft ein Fasten, wird der Fortschritt sofort aufs neue Ziel umgerechnet
     });
 
     // Barcode-Scanner öffnen/schließen
@@ -1737,6 +2176,7 @@
 
         requestAnimationFrame(() => {
           if (btn.dataset.view === 'history') renderHistory();
+          if (btn.dataset.view === 'fasting') renderFasting();
           $('#view-' + btn.dataset.view).classList.add('active');
           if (btn.dataset.view === 'stats') renderCharts();
         });
@@ -1756,6 +2196,11 @@
     renderFavorites();
     renderDashboard();
     renderHistory();
+
+    // Fasten-Ring initialisieren und Live-Countdown im Sekundentakt
+    $('#fast-progress').style.strokeDasharray = RING_CIRCUMFERENCE;
+    renderFasting();
+    setInterval(() => { if (state.fastingActive) renderFasting(); }, 1000);
   }
 
   document.addEventListener('DOMContentLoaded', init);
