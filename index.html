@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Kalorien">
 <title>Kalorien &middot; Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 <style>
   :root {
     --bg-0: #07090f;
@@ -229,6 +230,88 @@
   .icon-btn:active { transform: scale(0.9); }
   .icon-btn.danger:active { color: var(--danger); border-color: var(--danger); }
   .icon-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+  /* ---------- Barcode-Scanner ---------- */
+  .icon-btn.scan {
+    width: 49px;
+    min-height: 46px;
+    height: auto;
+    align-self: stretch;
+    border-radius: 14px;
+    color: var(--rose);
+  }
+  .icon-btn.scan svg { display: block; }
+  .icon-btn.scan:active { border-color: var(--rose); background: rgba(230, 183, 160, 0.1); }
+
+  .scanner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(5, 7, 12, 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fade 0.25s ease;
+  }
+  .scanner-overlay[hidden] { display: none; }
+  .scanner-card {
+    width: 100%;
+    max-width: 380px;
+    background: linear-gradient(165deg, var(--glass-strong), var(--glass) 60%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    padding: 18px;
+  }
+  .scanner-card h2 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .scanner-frame {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 3 / 4;
+    border: 1px solid var(--border-soft);
+  }
+  #scanner-preview { width: 100%; height: 100%; }
+  #scanner-preview video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    display: block;
+  }
+  .scan-guide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 72%;
+    height: 32%;
+    transform: translate(-50%, -50%);
+    border: 1.5px solid rgba(230, 183, 160, 0.9);
+    border-radius: 14px;
+    box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3), 0 0 18px var(--rose-glow);
+    pointer-events: none;
+  }
+  .scanner-hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 13px 0;
+  }
+  .btn.cancel {
+    color: #2a0f0f;
+    background: linear-gradient(120deg, #f2b3b3, var(--danger) 70%);
+    box-shadow: 0 6px 20px rgba(231, 124, 124, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
 
   /* ---------- Wassertracker ---------- */
   .water-head {
@@ -568,6 +651,12 @@
       <div class="field-row">
         <input type="text" id="inp-name" placeholder="Lebensmittel" autocomplete="off" enterkeyhint="next">
         <input type="number" id="inp-kcal" placeholder="kcal" min="1" inputmode="numeric" enterkeyhint="done">
+        <button class="icon-btn scan" id="btn-scan" aria-label="Barcode scannen" title="Barcode scannen">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 8.5a2 2 0 0 1 2-2h1.6l1.1-1.7a1.5 1.5 0 0 1 1.26-.68h6.08a1.5 1.5 0 0 1 1.26.68l1.1 1.7H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <circle cx="12" cy="12.8" r="3.4"/>
+          </svg>
+        </button>
       </div>
       <div class="add-row">
         <button class="btn" id="btn-add">Hinzufügen</button>
@@ -655,6 +744,18 @@
     <button data-view="stats"><span class="ico">&#10148;</span>Statistik</button>
   </div>
 </nav>
+
+<div class="scanner-overlay" id="scanner-overlay" hidden>
+  <div class="scanner-card">
+    <h2>Barcode scannen</h2>
+    <div class="scanner-frame">
+      <div id="scanner-preview"></div>
+      <div class="scan-guide"></div>
+    </div>
+    <p class="scanner-hint">Barcode mittig in den Rahmen halten</p>
+    <button class="btn cancel" id="scanner-cancel">Abbrechen</button>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -1190,6 +1291,86 @@
     if ($('#view-stats').classList.contains('active')) renderCharts();
   }
 
+  /* ================= Barcode-Scanner ================= */
+
+  let scanner = null;      // aktive Html5Qrcode-Instanz
+  let scannerBusy = false; // verhindert Doppel-Treffer desselben Barcodes
+
+  function closeScanner() {
+    const overlay = $('#scanner-overlay');
+    const done = () => { overlay.hidden = true; };
+    if (scanner) {
+      const s = scanner;
+      scanner = null;
+      // Kamera-Ressourcen ordnungsgemäß freigeben (Akku!)
+      s.stop().then(() => s.clear()).catch(() => {}).finally(done);
+    } else {
+      done();
+    }
+  }
+
+  function openScanner() {
+    if (typeof Html5Qrcode === 'undefined') {
+      toast('Scanner nicht verfügbar – bitte mit Internetverbindung öffnen');
+      return;
+    }
+    if (scanner) return;
+    scannerBusy = false;
+    $('#scanner-overlay').hidden = false;
+    try {
+      // Nur EAN-13/EAN-8 (Lebensmittel-Barcodes) – macht die Erkennung schneller
+      scanner = new Html5Qrcode('scanner-preview', {
+        formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8],
+        verbose: false
+      });
+    } catch (e) {
+      scanner = new Html5Qrcode('scanner-preview');
+    }
+    scanner.start(
+      { facingMode: 'environment' }, // Rückkamera bevorzugen
+      { fps: 10, qrbox: { width: 230, height: 140 } },
+      (decodedText) => onBarcode(decodedText),
+      () => {} // Frames ohne Treffer – ignorieren
+    ).catch(() => {
+      toast('Kamera nicht verfügbar – Berechtigung erteilt?');
+      closeScanner();
+    });
+  }
+
+  function onBarcode(barcode) {
+    if (scannerBusy) return;
+    scannerBusy = true;
+    haptic(30);
+    closeScanner(); // Kamera sofort stoppen
+    toast('Suche Produkt…');
+    fetchProduct(barcode);
+  }
+
+  async function fetchProduct(barcode) {
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const product = data && data.status === 1 ? data.product : null;
+      const name = product ? (product.product_name_de || product.product_name) : null;
+      if (!name) { toast('Produkt nicht gefunden'); return; }
+
+      const kcal = product.nutriments ? Math.round(Number(product.nutriments['energy-kcal_100g'])) : NaN;
+      $('#inp-name').value = `${name} (100g)`;
+      if (Number.isFinite(kcal) && kcal > 0) {
+        $('#inp-kcal').value = kcal;
+        haptic();
+        toast(`<span class="t-accent">${fmt.format(kcal)} kcal / 100g</span>&nbsp; ${esc(name)}`);
+      } else {
+        $('#inp-kcal').value = '';
+        $('#inp-kcal').focus();
+        toast('Keine Kalorienangabe – bitte manuell ergänzen');
+      }
+    } catch (e) {
+      toast('Produkt nicht gefunden – Netzwerkfehler?');
+    }
+  }
+
   /* ================= Events ================= */
 
   function bindEvents() {
@@ -1270,6 +1451,13 @@
       haptic(20);
       toast(result === 'decremented' ? '1&times; entfernt' : 'Eintrag gelöscht');
       refreshAll(); // aktualisiert Historie, Dashboard und Graphen
+    });
+
+    // Barcode-Scanner öffnen/schließen
+    $('#btn-scan').addEventListener('click', () => { haptic(); openScanner(); });
+    $('#scanner-cancel').addEventListener('click', () => { haptic(); closeScanner(); });
+    $('#scanner-overlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeScanner(); // Tipp auf den Hintergrund
     });
 
     // Wasser: Schnellauswahl (+250 / +500 / −250)
