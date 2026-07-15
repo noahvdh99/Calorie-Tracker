@@ -717,6 +717,19 @@
   .chart-wrap { position: relative; height: 240px; }
   .chart-caption { text-align: center; font-size: 12px; color: var(--text-faint); margin-top: 12px; }
 
+  /* ---------- Daten-Backup ---------- */
+  .backup-row { display: flex; gap: 10px; }
+  .backup-row .btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    padding: 13px 6px;
+  }
+  .backup-row svg { flex-shrink: 0; }
+
   /* ---------- Bottom Navigation ---------- */
   nav {
     position: fixed;
@@ -862,6 +875,25 @@
         <span>Gesamt</span>
         <span class="sum" id="today-sum">0 kcal</span>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Daten sichern &amp; wiederherstellen</h2>
+      <div class="backup-row">
+        <button class="btn ghost" id="btn-export">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>
+          </svg>
+          Backup herunterladen
+        </button>
+        <button class="btn ghost" id="btn-import">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 21V9"/><path d="m7 13 5-5 5 5"/><path d="M4 4h16"/>
+          </svg>
+          Backup einspielen
+        </button>
+      </div>
+      <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none;">
     </div>
 
   </section>
@@ -1021,6 +1053,17 @@
     <div class="portion-actions">
       <button class="btn ghost" id="fastbreak-no">Nein, weiter fasten</button>
       <button class="btn" id="fastbreak-yes">Ja, Fasten beenden</button>
+    </div>
+  </div>
+</div>
+
+<div class="scanner-overlay" id="import-modal" hidden>
+  <div class="scanner-card">
+    <h2>Backup einspielen?</h2>
+    <p class="fastbreak-text" id="import-text"></p>
+    <div class="portion-actions">
+      <button class="btn ghost" id="import-cancel">Abbrechen</button>
+      <button class="btn" id="import-confirm">Ja, einspielen</button>
     </div>
   </div>
 </div>
@@ -1761,6 +1804,73 @@
     suggestTimer = setTimeout(() => { el.hidden = true; }, 300);
   }
 
+  /* ================= Daten-Backup (Export & Import) ================= */
+
+  function exportBackup() {
+    const backup = {
+      app: 'kalorien-tracker',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      state
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kalorien_tracker_backup_${todayKey()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    haptic();
+    toast('Backup erfolgreich heruntergeladen!');
+  }
+
+  // Sicherheits-Check: akzeptiert unsere Backup-Dateien (mit App-Kennung)
+  // sowie rohe State-Objekte, sofern die Kernstruktur stimmt
+  function validateBackup(data) {
+    const st = data && data.app === 'kalorien-tracker' ? data.state : data;
+    if (!st || typeof st !== 'object') return null;
+    if (typeof st.goal !== 'number') return null;
+    if (!st.days || typeof st.days !== 'object' || Array.isArray(st.days)) return null;
+    if (!Array.isArray(st.favorites)) return null;
+    return st;
+  }
+
+  let pendingImport = null; // validierter State, solange das Bestätigungs-Modal offen ist
+
+  function handleImportFile(file) {
+    const reader = new FileReader();
+    reader.onerror = () => toast('Ungültige Backup-Datei');
+    reader.onload = () => {
+      let parsed = null;
+      try { parsed = JSON.parse(reader.result); } catch (e) {}
+      const imported = validateBackup(parsed);
+      if (!imported) { toast('Ungültige Backup-Datei'); return; }
+      pendingImport = imported;
+      const info = parsed && parsed.exportedAt ? `<br><br>Backup vom <b>${new Date(parsed.exportedAt).toLocaleDateString('de-DE')}</b>` : '';
+      $('#import-text').innerHTML =
+        'Möchtest du dieses Backup einspielen? Deine aktuellen Daten auf diesem Gerät werden dabei überschrieben.' + info;
+      $('#import-modal').hidden = false;
+    };
+    reader.readAsText(file);
+  }
+
+  function confirmImport() {
+    if (!pendingImport) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingImport));
+    } catch (e) {
+      toast('Backup konnte nicht gespeichert werden');
+      pendingImport = null;
+      $('#import-modal').hidden = true;
+      return;
+    }
+    // Neu laden: Charts, Listen und Zähler starten sauber mit den importierten
+    // Daten; migrate() ergänzt dabei automatisch eventuell fehlende Felder
+    location.reload();
+  }
+
   /* ================= Barcode-Scanner ================= */
 
   let scanner = null;      // aktive Html5Qrcode-Instanz
@@ -2062,6 +2172,24 @@
       save();
       haptic();
       renderFasting(); // läuft ein Fasten, wird der Fortschritt sofort aufs neue Ziel umgerechnet
+    });
+
+    // Daten-Backup
+    $('#btn-export').addEventListener('click', exportBackup);
+    $('#btn-import').addEventListener('click', () => { haptic(); $('#backup-file-input').click(); });
+    $('#backup-file-input').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleImportFile(file);
+      e.target.value = ''; // erlaubt erneute Auswahl derselben Datei
+    });
+    $('#import-confirm').addEventListener('click', confirmImport);
+    $('#import-cancel').addEventListener('click', () => {
+      pendingImport = null;
+      $('#import-modal').hidden = true;
+      haptic();
+    });
+    $('#import-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) { pendingImport = null; e.currentTarget.hidden = true; }
     });
 
     // Barcode-Scanner öffnen/schließen
