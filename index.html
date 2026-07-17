@@ -718,17 +718,24 @@
   .chart-caption { text-align: center; font-size: 12px; color: var(--text-faint); margin-top: 12px; }
 
   /* ---------- Daten-Backup ---------- */
-  .backup-row { display: flex; gap: 10px; }
-  .backup-row .btn {
-    flex: 1;
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .icon-btn.header-backup {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    color: var(--text-dim);
+  }
+  .icon-btn.header-backup:active { color: var(--rose); border-color: var(--rose); }
+  .backup-col { display: flex; flex-direction: column; gap: 10px; }
+  .backup-col .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-size: 13px;
-    padding: 13px 6px;
+    font-size: 13.5px;
   }
-  .backup-row svg { flex-shrink: 0; }
+  .backup-col svg { flex-shrink: 0; }
+  .backup-col .backup-close { color: var(--text-faint); border-color: transparent; background: transparent; }
 
   /* ---------- Bottom Navigation ---------- */
   nav {
@@ -812,7 +819,16 @@
 
   <header>
     <h1>Kalorien</h1>
-    <span class="date" id="header-date"></span>
+    <div class="header-right">
+      <span class="date" id="header-date"></span>
+      <button class="icon-btn header-backup" id="btn-backup" aria-label="Daten sichern &amp; wiederherstellen" title="Daten sichern &amp; wiederherstellen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/>
+          <path d="M4.5 5.5v13c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8v-13"/>
+          <path d="M4.5 12c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <!-- ================= DASHBOARD ================= -->
@@ -875,25 +891,6 @@
         <span>Gesamt</span>
         <span class="sum" id="today-sum">0 kcal</span>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Daten sichern &amp; wiederherstellen</h2>
-      <div class="backup-row">
-        <button class="btn ghost" id="btn-export">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>
-          </svg>
-          Backup herunterladen
-        </button>
-        <button class="btn ghost" id="btn-import">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 21V9"/><path d="m7 13 5-5 5 5"/><path d="M4 4h16"/>
-          </svg>
-          Backup einspielen
-        </button>
-      </div>
-      <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none;">
     </div>
 
   </section>
@@ -1054,6 +1051,28 @@
       <button class="btn ghost" id="fastbreak-no">Nein, weiter fasten</button>
       <button class="btn" id="fastbreak-yes">Ja, Fasten beenden</button>
     </div>
+  </div>
+</div>
+
+<div class="scanner-overlay" id="backup-modal" hidden>
+  <div class="scanner-card">
+    <h2>Daten sichern &amp; wiederherstellen</h2>
+    <div class="backup-col">
+      <button class="btn ghost" id="btn-export">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>
+        </svg>
+        Backup herunterladen
+      </button>
+      <button class="btn ghost" id="btn-import">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 21V9"/><path d="m7 13 5-5 5 5"/><path d="M4 4h16"/>
+        </svg>
+        Backup einspielen
+      </button>
+      <button class="btn ghost backup-close" id="backup-close">Schließen</button>
+    </div>
+    <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none;">
   </div>
 </div>
 
@@ -2174,9 +2193,21 @@
       renderFasting(); // läuft ein Fasten, wird der Fortschritt sofort aufs neue Ziel umgerechnet
     });
 
-    // Daten-Backup
-    $('#btn-export').addEventListener('click', exportBackup);
-    $('#btn-import').addEventListener('click', () => { haptic(); $('#backup-file-input').click(); });
+    // Daten-Backup: kleiner Header-Button öffnet das Auswahl-Modal
+    $('#btn-backup').addEventListener('click', () => { haptic(); $('#backup-modal').hidden = false; });
+    $('#backup-close').addEventListener('click', () => { $('#backup-modal').hidden = true; haptic(); });
+    $('#backup-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+    });
+    $('#btn-export').addEventListener('click', () => {
+      $('#backup-modal').hidden = true;
+      exportBackup();
+    });
+    $('#btn-import').addEventListener('click', () => {
+      $('#backup-modal').hidden = true;
+      haptic();
+      $('#backup-file-input').click();
+    });
     $('#backup-file-input').addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
       if (file) handleImportFile(file);
