@@ -32,6 +32,7 @@
     --aqua-glow: rgba(98, 203, 232, 0.25);
     --danger: #e77c7c;
     --radius: 22px;
+    --safe-t: env(safe-area-inset-top, 0px);
     --safe-b: env(safe-area-inset-bottom, 0px);
   }
 
@@ -61,7 +62,9 @@
   .app {
     max-width: 480px;
     margin: 0 auto;
-    padding: 22px 18px calc(104px + var(--safe-b));
+    /* Oben Platz für die iOS-Statusleiste (Uhrzeit & Symbole) lassen –
+       im Browser ist --safe-t einfach 0 und alles bleibt wie gehabt */
+    padding: calc(20px + var(--safe-t)) 18px calc(104px + var(--safe-b));
   }
 
   /* ---------- Header ---------- */
